@@ -2,11 +2,10 @@ import { BuildDetail } from "@/components/BuildDetail";
 import { loadClusterIds } from "@/lib/static/clusters";
 
 export function generateStaticParams() {
-  if (process.env.STATIC_EXPORT !== "1") return [];
   return loadClusterIds().map((id) => ({ id }));
 }
 
-export const dynamicParams = true;
+export const dynamicParams = false;
 
 export default async function BuildPage({
   params,
