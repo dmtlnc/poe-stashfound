@@ -1,4 +1,4 @@
-name = "stashfound-import"
+name = "poe-stashfound"
 main = "worker/src/index.ts"
 compatibility_date = "2025-09-01"
 
@@ -6,7 +6,7 @@ compatibility_date = "2025-09-01"
 
 # Exact browser Origins (scheme + host + port). No wildcards.
 [vars]
-ALLOWED_ORIGINS = "http://localhost:3000,http://127.0.0.1:3000,https://dmtlnc.github.io"
+ALLOWED_ORIGINS = "http://localhost:3000,http://127.0.0.1:3000,https://dmtlnc.github.io,https://dimalecnhuk.github.io,https://dimalenchuk.github.io"
 
 # Optional: wrangler secret put TURNSTILE_SECRET
 # When set, POST /import requires a valid Turnstile token.
