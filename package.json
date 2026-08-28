@@ -14,7 +14,6 @@
     "worker:deploy": "npx --yes wrangler@4 deploy --env-file worker/.dev.vars"
   },
   "dependencies": {
-    "iron-session": "^8.0.4",
     "next": "16.3.3",
     "react": "19.2.8",
     "react-dom": "19.2.8"

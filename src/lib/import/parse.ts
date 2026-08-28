@@ -37,7 +37,7 @@ export function parsePoeladderUrl(raw: string): {
   }
 }
 
-/** PoE Ladder account tags: `name-1234` or GGG-style `name#1234`. */
+/** PoE Ladder account tags: `name-1234` or `name#1234`. */
 export function parsePoeladderTag(raw: string): string | null {
   const t = raw.trim().replace(/^@/, "");
   const m = t.match(/^([A-Za-z0-9_][A-Za-z0-9._]{0,31})[-#](\d{4})$/);

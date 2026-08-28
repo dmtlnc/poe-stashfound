@@ -1,3 +1,2 @@
-# Copy to worker/.dev.vars for local wrangler.
-# Never put Next.js SESSION_SECRET or GGG credentials here.
+# Local Worker env only. Do not put app secrets here.
 # TURNSTILE_SECRET=
