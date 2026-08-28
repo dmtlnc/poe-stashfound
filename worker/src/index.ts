@@ -10,7 +10,8 @@
  * shared secret in the static frontend — it is extractable.
  */
 import { parsePoeladderAccount, parsePoeladderTag } from "../../src/lib/import/parse";
-import { pickCurrentSsfLadder, type PoeladderLadder } from "../../src/lib/poeladder/ladders";
+import { isLadderMode, parseLadderMode, LADDER_LABEL } from "../../src/lib/leagues/modes";
+import { pickLadderByMode, type PoeladderLadder } from "../../src/lib/poeladder/ladders";
 
 const UPSTREAM = "https://poeladder.com";
 const API = `${UPSTREAM}/api/v1`;
@@ -92,9 +93,13 @@ async function handleImport(request: Request, env: Env, origin: string): Promise
     return json({ error: "Request too large" }, 413, origin);
   }
 
-  let body: { url?: unknown; turnstileToken?: unknown };
+  let body: { url?: unknown; turnstileToken?: unknown; ladderMode?: unknown };
   try {
-    body = JSON.parse(rawText) as { url?: unknown; turnstileToken?: unknown };
+    body = JSON.parse(rawText) as {
+      url?: unknown;
+      turnstileToken?: unknown;
+      ladderMode?: unknown;
+    };
   } catch {
     return json({ error: "Invalid JSON" }, 400, origin);
   }
@@ -122,9 +127,28 @@ async function handleImport(request: Request, env: Env, origin: string): Promise
     return json({ error: "Invalid ladder." }, 400, origin);
   }
 
+  if (
+    body.ladderMode !== undefined &&
+    body.ladderMode !== null &&
+    (typeof body.ladderMode !== "string" || !isLadderMode(body.ladderMode))
+  ) {
+    return json({ error: "Unknown SSF league." }, 400, origin);
+  }
+  const ladderMode = parseLadderMode(
+    typeof body.ladderMode === "string" ? body.ladderMode : undefined,
+  );
+
   const signal = AbortSignal.timeout(TIMEOUT_MS);
   if (!ladder) {
-    ladder = await resolveLadder(signal);
+    try {
+      ladder = await resolveLadder(signal, ladderMode);
+    } catch {
+      return json(
+        { error: `Could not find ${LADDER_LABEL[ladderMode]} on PoE Ladder.` },
+        404,
+        origin,
+      );
+    }
   }
 
   const names = await fetchOwnedNames(user, ladder, signal);
@@ -135,11 +159,14 @@ async function handleImport(request: Request, env: Env, origin: string): Promise
   return json({ names, accountHint: user }, 200, origin);
 }
 
-async function resolveLadder(signal: AbortSignal): Promise<string> {
+async function resolveLadder(
+  signal: AbortSignal,
+  mode: ReturnType<typeof parseLadderMode>,
+): Promise<string> {
   const res = await poeladderGet(`${API}/ladders`, signal);
   if (!res.ok) throw new Error("ladders");
   const ladders = (await res.json()) as PoeladderLadder[];
-  const pick = pickCurrentSsfLadder(Array.isArray(ladders) ? ladders : []);
+  const pick = pickLadderByMode(Array.isArray(ladders) ? ladders : [], mode);
   if (!pick) throw new Error("ladder");
   if (!LADDER_ID_RE.test(pick.identifier)) throw new Error("ladder");
   return pick.identifier;

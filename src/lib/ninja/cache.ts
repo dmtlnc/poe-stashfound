@@ -1,7 +1,15 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { NINJA_CACHE_MS } from "../config";
-import { isChallengeTradeBuildLeague, pickCurrentTradeBuildLeague } from "../ggg/leagues";
+import {
+  economyLeagueNameForMode,
+  pickTradeBuildLeagueByMode,
+} from "../ggg/leagues";
+import {
+  DEFAULT_NINJA_MODE,
+  type NinjaMode,
+  ninjaModeFromClusterId,
+} from "../leagues/modes";
 import type { BuildCluster } from "../types";
 import { buildClusterFromMeta } from "./cluster";
 import { SKIP_BUILD_UNIQUES } from "./url";
@@ -18,21 +26,21 @@ import type { ParsedSearch } from "./protobuf";
 
 export type NinjaCache = {
   version?: number;
+  ninjaMode?: NinjaMode;
   fetchedAt: string;
   gggLeague: string;
   ninjaOverview: string;
   ninjaUrlSlug: string;
-  source: "ninja" | "fallback";
+  source: "ninja" | "fallback" | "unavailable";
   clusters: BuildCluster[];
 };
 
 const cacheDir = path.join(process.cwd(), "data", "cache");
-const cacheFile = path.join(cacheDir, "ninja-ssf.json");
 const TOP_SKILLS = 100;
 const MIN_SKILL_CHARS = 12;
 const UNIQUE_USAGE = 0.2;
 const MAX_UNIQUES = 12;
-const CACHE_VERSION = 6;
+const CACHE_VERSION = 7;
 const SKIP_SKILLS = new Set([
   "Animate Guardian",
   "Shield Charge",
@@ -46,7 +54,17 @@ const SKIP_SKILLS = new Set([
   "Vaal Lightning Warp",
 ]);
 
-let memory: { expiresAt: number; value: NinjaCache } | null = null;
+const MODE_LABEL: Record<NinjaMode, string> = {
+  standard: "Standard",
+  allflame: "Allflame",
+  allflamehc: "Hardcore Allflame",
+};
+
+const memory = new Map<NinjaMode, { expiresAt: number; value: NinjaCache }>();
+
+export function ninjaCacheFile(mode: NinjaMode): string {
+  return path.join(cacheDir, `ninja-${mode}.json`);
+}
 
 function dimMap(search: ParsedSearch, id: string) {
   return search.dimensions.find((d) => d.id === id);
@@ -61,29 +79,43 @@ function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-async function readDisk(): Promise<NinjaCache | null> {
+async function readDisk(mode: NinjaMode): Promise<NinjaCache | null> {
   try {
-    const raw = await readFile(cacheFile, "utf8");
+    const raw = await readFile(ninjaCacheFile(mode), "utf8");
     return JSON.parse(raw) as NinjaCache;
   } catch {
     return null;
   }
 }
 
-async function writeDisk(value: NinjaCache) {
+async function writeDisk(mode: NinjaMode, value: NinjaCache) {
   await mkdir(cacheDir, { recursive: true });
-  await writeFile(cacheFile, JSON.stringify(value));
+  await writeFile(ninjaCacheFile(mode), JSON.stringify(value));
 }
 
-function fallbackCache(gggLeague: string, overview: string): NinjaCache {
+function fallbackCache(): NinjaCache {
   return {
     version: CACHE_VERSION,
+    ninjaMode: DEFAULT_NINJA_MODE,
     fetchedAt: new Date().toISOString(),
-    gggLeague,
-    ninjaOverview: overview,
+    gggLeague: "Allflame",
+    ninjaOverview: "allflame",
     ninjaUrlSlug: "allflame",
     source: "fallback",
     clusters: fallback.clusters as BuildCluster[],
+  };
+}
+
+function unavailableCache(mode: NinjaMode, leagueName?: string): NinjaCache {
+  return {
+    version: CACHE_VERSION,
+    ninjaMode: mode,
+    fetchedAt: new Date().toISOString(),
+    gggLeague: leagueName ?? MODE_LABEL[mode],
+    ninjaOverview: mode === "allflamehc" ? "hardcore-allflame" : mode,
+    ninjaUrlSlug: mode,
+    source: "unavailable",
+    clusters: [],
   };
 }
 
@@ -123,7 +155,7 @@ function dominantClass(search: ParsedSearch, classDict: string[]): string {
   return nameAt(classDict, top.key) ?? "Unknown";
 }
 
-function pickLeague(idx: IndexState): IndexLeague | null {
+function pickLeague(idx: IndexState, mode: NinjaMode): IndexLeague | null {
   const overrideOverview = process.env.POE_NINJA_OVERVIEW;
   const all = [...idx.buildLeagues, ...(idx.oldBuildLeagues ?? [])];
   if (overrideOverview) {
@@ -131,37 +163,45 @@ function pickLeague(idx: IndexState): IndexLeague | null {
       (s) => s.snapshotName === overrideOverview || s.url === overrideOverview,
     );
     if (snap) {
-      return (
+      const league =
         all.find((l) => l.url === snap.url) ?? {
           name: snap.name,
           url: snap.url,
-        }
-      );
+        };
+      if (pickTradeBuildLeagueByMode([league], mode)) return league;
     }
   }
   return (
-    pickCurrentTradeBuildLeague(idx.buildLeagues) ??
-    pickCurrentTradeBuildLeague(idx.oldBuildLeagues ?? [])
+    pickTradeBuildLeagueByMode(idx.buildLeagues, mode) ??
+    pickTradeBuildLeagueByMode(idx.oldBuildLeagues ?? [], mode)
   );
 }
 
-async function buildLiveCache(): Promise<NinjaCache> {
+async function buildLiveCache(mode: NinjaMode): Promise<NinjaCache> {
   const idx = await fetchIndexState();
-  const league = pickLeague(idx);
-  if (!league || !isChallengeTradeBuildLeague(league.name, league.url)) {
-    throw new Error("No current challenge league on poe.ninja");
+  const league = pickLeague(idx, mode);
+  if (!league) {
+    if (mode === "allflame") {
+      throw new Error("No current challenge league on poe.ninja");
+    }
+    return unavailableCache(mode);
   }
 
   const snap = idx.snapshotVersions.find(
     (s) => s.url === league.url && s.type === "exp",
   );
-  if (!snap) throw new Error(`No exp snapshot for ${league.url}`);
+  if (!snap) {
+    if (mode === "allflame") {
+      throw new Error(`No exp snapshot for ${league.url}`);
+    }
+    return unavailableCache(mode, league.name);
+  }
 
-  const tradeLeague =
-    idx.economyLeagues?.find(
-      (l) =>
-        !/hardcore|standard/i.test(l.name) && !/^ssf /i.test(l.name),
-    )?.name ?? league.name.replace(/^SSF\s+/i, "");
+  const tradeLeague = economyLeagueNameForMode(
+    idx.economyLeagues,
+    mode,
+    league.name.replace(/^SSF\s+/i, ""),
+  );
 
   const overview = snap.snapshotName;
   const base = await fetchBuildSearch(snap.version, overview);
@@ -198,6 +238,7 @@ async function buildLiveCache(): Promise<NinjaCache> {
     });
     const uniques = pickUniques(filtered, itemDict, allow);
     const cluster = buildClusterFromMeta({
+      ninjaMode: mode,
       className: dominantClass(filtered, classDict),
       skill: skill.name,
       uniqueNames: uniques,
@@ -209,11 +250,12 @@ async function buildLiveCache(): Promise<NinjaCache> {
   }
 
   if (clusters.length === 0) {
-    throw new Error("ninja search returned no skill clusters");
+    throw new Error(`ninja search returned no skill clusters for ${league.name}`);
   }
 
   return {
     version: CACHE_VERSION,
+    ninjaMode: mode,
     fetchedAt: new Date().toISOString(),
     gggLeague: league.name,
     ninjaOverview: overview,
@@ -223,41 +265,45 @@ async function buildLiveCache(): Promise<NinjaCache> {
   };
 }
 
-export async function getNinjaCache(force = false): Promise<NinjaCache> {
+export async function getNinjaCache(
+  mode: NinjaMode = DEFAULT_NINJA_MODE,
+  force = false,
+): Promise<NinjaCache> {
   const now = Date.now();
+  const hit = memory.get(mode);
   if (
     !force &&
-    memory &&
-    memory.expiresAt > now &&
-    memory.value.version === CACHE_VERSION
+    hit &&
+    hit.expiresAt > now &&
+    hit.value.version === CACHE_VERSION
   ) {
-    return memory.value;
+    return hit.value;
   }
 
   if (!force) {
-    const disk = await readDisk();
+    const disk = await readDisk(mode);
     if (
       disk &&
       disk.version === CACHE_VERSION &&
       now - Date.parse(disk.fetchedAt) < NINJA_CACHE_MS
     ) {
-      memory = {
+      memory.set(mode, {
         expiresAt: Date.parse(disk.fetchedAt) + NINJA_CACHE_MS,
         value: disk,
-      };
+      });
       return disk;
     }
   }
 
   try {
-    const value = await buildLiveCache();
-    await writeDisk(value);
-    memory = { expiresAt: now + NINJA_CACHE_MS, value };
+    const value = await buildLiveCache(mode);
+    await writeDisk(mode, value);
+    memory.set(mode, { expiresAt: now + NINJA_CACHE_MS, value });
     return value;
   } catch (err) {
-    console.error("poe.ninja cluster fetch failed", err);
-    const value = fallbackCache("Allflame", "allflame");
-    memory = { expiresAt: now + 30 * 60 * 1000, value };
+    console.error(`poe.ninja cluster fetch failed (${mode})`, err);
+    const value = mode === "allflame" ? fallbackCache() : unavailableCache(mode);
+    memory.set(mode, { expiresAt: now + 30 * 60 * 1000, value });
     return value;
   }
 }
@@ -270,6 +316,7 @@ export async function getClusterById(
   id: string,
   mock: boolean,
 ): Promise<BuildCluster | undefined> {
-  const cache = await getClustersForUser(mock);
+  const cache = await getNinjaCache(ninjaModeFromClusterId(id), false);
+  void mock;
   return cache.clusters.find((c) => c.id === id);
 }

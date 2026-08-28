@@ -1,13 +1,16 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { ninjaUserAgent } from "../config";
+import { decodeHtml, itemName } from "../wiki";
 import type { DivCard } from "../types";
 import type { FarmWikiIndex, UniqueFarmMeta } from "./types";
+
+export { itemName };
 
 export type { FarmWikiIndex, UniqueFarmMeta } from "./types";
 
 const CACHE_MS = 24 * 60 * 60 * 1000;
-const CACHE_VERSION = 2;
+const CACHE_VERSION = 3;
 const cacheFile = path.join(process.cwd(), "data", "cache", "farm-wiki.json");
 const TIERS_PAGE = "Guide:Analysis_of_unique_item_tiers";
 const SKIP_HEADINGS = /^(tier |distributions|testing |caveats|notes|references|see also|external)/i;
@@ -58,22 +61,6 @@ export async function cargoQuery(
   return rows;
 }
 
-function decodeHtml(s: string): string {
-  return s
-    .replaceAll("&lt;", "<")
-    .replaceAll("&gt;", ">")
-    .replaceAll("&amp;", "&")
-    .replaceAll("&quot;", '"')
-    .replaceAll("&#039;", "'")
-    .replaceAll("&apos;", "'")
-    .replaceAll("&nbsp;", " ");
-}
-
-/** Wiki cargo encodes apostrophes as &#039; — lookup keys must match stash names. */
-export function itemName(name: string): string {
-  return decodeHtml(name).replaceAll("\u2019", "'").trim();
-}
-
 function remapKeys<T>(obj: Record<string, T>, merge?: (a: T, b: T) => T): Record<string, T> {
   const out: Record<string, T> = {};
   for (const [k, v] of Object.entries(obj)) {
@@ -94,14 +81,29 @@ function normalizeIndex(index: FarmWikiIndex): FarmWikiIndex {
       tier: b.tier ?? a.tier,
       slot: b.slot ?? a.slot,
     })),
-    cardsByUnique: remapKeys(index.cardsByUnique, (a, b) => {
-      const names = new Set(a.map((c) => c.name));
-      return [...a, ...b.filter((c) => !names.has(c.name))];
+    cardsByUnique: remapKeys(
+      Object.fromEntries(
+        Object.entries(index.cardsByUnique).map(([key, cards]) => [
+          key,
+          cards.map((card) => ({
+            ...card,
+            name: itemName(card.name),
+            where: card.where ? itemName(card.where) : card.where,
+          })),
+        ]),
+      ),
+      (a, b) => {
+        const names = new Set(a.map((c) => c.name));
+        return [...a, ...b.filter((c) => !names.has(c.name))];
+      },
+    ),
+    restricted: remapKeys(index.restricted, (a, b) => {
+      const dropText = b.dropText ?? a.dropText;
+      return {
+        dropText: dropText ? decodeHtml(dropText) : undefined,
+        className: b.className ?? a.className,
+      };
     }),
-    restricted: remapKeys(index.restricted, (a, b) => ({
-      dropText: b.dropText ?? a.dropText,
-      className: b.className ?? a.className,
-    })),
   };
 }
 

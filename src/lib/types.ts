@@ -1,3 +1,5 @@
+import type { LadderMode, NinjaMode } from "./leagues/modes";
+
 export type UniqueSource = {
   type: "stash" | "character" | "import";
   label: string;
@@ -20,6 +22,12 @@ export type InventorySnapshot = {
   uniques: UniqueItem[];
   tabCount: number;
   characterCount: number;
+  /** PoE Ladder SSF league used for import. */
+  ladderMode?: LadderMode;
+  /** poe.ninja trade-build cache to match against. */
+  ninjaMode?: NinjaMode;
+  /** Account tag for re-import when switching stash league. */
+  ladderAccount?: string;
 };
 
 export type FarmKind =
@@ -65,6 +73,9 @@ export type MatchResult = {
   score: number;
   owned: string[];
   missing: string[];
+  /** Counted names owned (roll-chase omitted when that toggle is on). */
+  nameHits: number;
+  nameTotal: number;
   variantWarnings: string[];
 };
 

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ContactLine } from "./ContactLine";
 import { clearInventory } from "@/lib/client/store";
 
 export function AppHeader({
@@ -19,11 +20,12 @@ export function AppHeader({
 
   return (
     <header className="relative px-6 py-4">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
-        <Link href="/app" className="brand text-lg">
+      <div className="mx-auto flex max-w-6xl items-center gap-3">
+        <Link href="/app" className="brand shrink-0 text-lg">
           Stashfound
         </Link>
-        <div className="flex items-center gap-4 text-sm text-muted">
+        <ContactLine className="hidden min-w-0 flex-1 text-center text-xs leading-5 text-muted lg:block" />
+        <div className="ml-auto flex shrink-0 items-center gap-4 text-sm text-muted">
           <span className="label-caps">
             {accountName}
             {mock ? " · demo" : ""}
@@ -33,6 +35,7 @@ export function AppHeader({
           </button>
         </div>
       </div>
+      <ContactLine className="mx-auto mt-3 max-w-6xl text-center text-xs leading-5 text-muted lg:hidden" />
       <div className="rule mt-4" />
     </header>
   );

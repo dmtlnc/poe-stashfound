@@ -1,6 +1,7 @@
 "use client";
 
 import type { FarmHint } from "@/lib/types";
+import { wikiUrl } from "@/lib/wiki";
 import { UniqueArt } from "./UniqueArt";
 
 const KIND_LABEL: Record<FarmHint["kind"], string> = {
@@ -41,7 +42,7 @@ export function FarmList({ hints }: { hints: FarmHint[] }) {
               {hint.cards.map((card) => (
                 <li key={card.name}>
                   <a
-                    href={`https://www.poewiki.net/wiki/${encodeURIComponent(card.name.replaceAll(" ", "_"))}`}
+                    href={wikiUrl(card.name)}
                     target="_blank"
                     rel="noreferrer"
                     className="text-gold hover:text-gold-bright"

@@ -4,6 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { importUniques } from "@/lib/client/import";
 import { turnstileSiteKey } from "@/lib/client/base";
+import {
+  DEFAULT_LADDER_MODE,
+  LADDER_TO_NINJA,
+  type LadderMode,
+} from "@/lib/leagues/modes";
+import { LeagueSelects } from "./LeagueSelects";
 
 declare global {
   interface Window {
@@ -27,6 +33,7 @@ export function ImportPanel({
   const [file, setFile] = useState<File | null>(null);
   const [text, setText] = useState("");
   const [url, setUrl] = useState("");
+  const [ladderMode, setLadderMode] = useState<LadderMode>(DEFAULT_LADDER_MODE);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
@@ -62,6 +69,8 @@ export function ImportPanel({
         text,
         file,
         turnstileToken: turnstileToken ?? undefined,
+        ladderMode,
+        ninjaMode: LADDER_TO_NINJA[ladderMode],
       });
       if (onImported) await onImported();
       else router.push("/app");
@@ -95,9 +104,16 @@ export function ImportPanel({
           >
             Uniques URL ↗
           </a>
-          . CSV export and a pasted name list still work without the import worker.
+          . Pick the SSF league first — CSV and pasted names still work without
+          the import worker.
         </p>
       </div>
+      <LeagueSelects
+        ladderMode={ladderMode}
+        onLadderMode={setLadderMode}
+        disabled={busy}
+        showNinja={false}
+      />
       <label className="label-caps block">
         PoE Ladder account or URL
         <input

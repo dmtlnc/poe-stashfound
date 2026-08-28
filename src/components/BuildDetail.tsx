@@ -7,8 +7,10 @@ import { FarmList } from "./FarmList";
 import { UniqueArt, UniqueIconProvider } from "./UniqueArt";
 import { loadFarmWiki, loadNinja, matchOne } from "@/lib/client/data";
 import { loadInventory } from "@/lib/client/store";
+import { loadMatchPrefs } from "@/lib/client/prefs";
+import { ninjaModeFromClusterId } from "@/lib/leagues/modes";
 import type { BuildCluster, FarmHint, InventorySnapshot, MatchResult } from "@/lib/types";
-import { withNinjaItemFilters } from "@/lib/ninja/url";
+import { BuildOutboundLinks } from "./BuildOutboundLinks";
 
 export function BuildDetail({ id }: { id: string }) {
   const [cluster, setCluster] = useState<BuildCluster | null>(null);
@@ -22,7 +24,7 @@ export function BuildDetail({ id }: { id: string }) {
     (async () => {
       try {
         const [ninja, wiki, inv] = await Promise.all([
-          loadNinja(),
+          loadNinja(ninjaModeFromClusterId(id)),
           loadFarmWiki(),
           Promise.resolve(loadInventory()),
         ]);
@@ -32,7 +34,9 @@ export function BuildDetail({ id }: { id: string }) {
           setError("Build not found");
           return;
         }
-        const scored = matchOne(inv, found, wiki);
+        const scored = matchOne(inv, found, wiki, {
+          ignoreRollChase: loadMatchPrefs().ignoreRollChase,
+        });
         setCluster(found);
         setMatch(scored.match);
         setFarm(scored.farm);
@@ -66,18 +70,17 @@ export function BuildDetail({ id }: { id: string }) {
                 </span>
               </h1>
               <p className="mt-2 text-sm text-muted">
-                {match ? `${Math.round(match.score * 100)}% unique overlap` : ""} ·{" "}
+                {match
+                  ? match.nameTotal === 0
+                    ? "Roll-chase uniques only · "
+                    : `${Math.round(match.score * 100)}% weighted · ${match.nameHits}/${match.nameTotal} names · `
+                  : ""}
                 {cluster.characterCount} ninja characters · example{" "}
                 {cluster.example.name} (lvl {cluster.example.level})
               </p>
-              <a
-                href={withNinjaItemFilters(cluster.ninjaUrl, cluster.uniqueNames)}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-2 inline-block text-sm text-gold hover:text-gold-bright"
-              >
-                Open on poe.ninja
-              </a>
+              <div className="mt-3">
+                <BuildOutboundLinks cluster={cluster} />
+              </div>
             </div>
             {match?.variantWarnings.length ? (
               <p className="panel px-4 py-3 text-sm text-unique">

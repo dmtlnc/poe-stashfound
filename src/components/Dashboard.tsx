@@ -1,9 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppHeader } from "./AppHeader";
-import { FarmList } from "./FarmList";
+import { BuildMatchList } from "./BuildMatchList";
 import { ImportPanel } from "./ImportPanel";
 import { UniqueChip, UniqueIconProvider } from "./UniqueArt";
 import {
@@ -13,26 +12,78 @@ import {
   type MatchRow,
   type NinjaSnapshot,
 } from "@/lib/client/data";
-import { loadInventory } from "@/lib/client/store";
+import {
+  DEFAULT_MATCH_PREFS,
+  loadMatchPrefs,
+  saveMatchPrefs,
+  type MatchPrefs,
+} from "@/lib/client/prefs";
+import { importUniques } from "@/lib/client/import";
+import {
+  DEFAULT_LADDER_MODE,
+  DEFAULT_NINJA_MODE,
+  LADDER_LABEL,
+  LADDER_TO_NINJA,
+  parseLadderMode,
+  parseNinjaMode,
+  type LadderMode,
+  type NinjaMode,
+} from "@/lib/leagues/modes";
+import { loadInventory, saveInventory } from "@/lib/client/store";
 import type { FarmWikiIndex } from "@/lib/farm/types";
+import { CHASE_UNIQUES } from "@/lib/match/chase";
+import { isMustUseUnique } from "@/lib/match/mustUse";
+import { filterOptions, NEAR_MISS_FLOOR, type MatchOptions } from "@/lib/match/score";
 import type { InventorySnapshot } from "@/lib/types";
+import { LeagueSelects } from "./LeagueSelects";
+
+function prefsToOptions(prefs: MatchPrefs): MatchOptions {
+  return {
+    hideChaseMissing: prefs.hideChaseMissing,
+    ignoreRollChase: prefs.ignoreRollChase,
+    mustUse: prefs.mustUse || null,
+    classFilter: prefs.classFilter || null,
+    skillFilter: prefs.skillFilter || null,
+  };
+}
 
 export function Dashboard() {
   const [snapshot, setSnapshot] = useState<InventorySnapshot | null>(null);
   const [matches, setMatches] = useState<MatchRow[]>([]);
-  const [threshold, setThreshold] = useState(70);
+  const [almost, setAlmost] = useState<MatchRow[]>([]);
+  const [prefs, setPrefs] = useState<MatchPrefs>(DEFAULT_MATCH_PREFS);
+  const [prefsReady, setPrefsReady] = useState(false);
   const [status, setStatus] = useState("Loading stash…");
   const [error, setError] = useState<string | null>(null);
   const [ninjaMeta, setNinjaMeta] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [showImport, setShowImport] = useState(false);
   const [loadingMatches, setLoadingMatches] = useState(true);
+  const [leagueBusy, setLeagueBusy] = useState(false);
   const [ninja, setNinja] = useState<NinjaSnapshot | null>(null);
   const [wiki, setWiki] = useState<FarmWikiIndex | null>(null);
 
+  const filters = useMemo(
+    () => filterOptions(ninja?.clusters ?? []),
+    [ninja],
+  );
+
   const applyMatches = useCallback(
-    (inv: InventorySnapshot, ninjaData: NinjaSnapshot, wikiData: FarmWikiIndex, pct: number) => {
-      setMatches(matchWithFarm(inv, ninjaData, wikiData, pct));
+    (
+      inv: InventorySnapshot,
+      ninjaData: NinjaSnapshot,
+      wikiData: FarmWikiIndex,
+      next: MatchPrefs,
+    ) => {
+      const split = matchWithFarm(
+        inv,
+        ninjaData,
+        wikiData,
+        next.threshold,
+        prefsToOptions(next),
+      );
+      setMatches(split.matches);
+      setAlmost(split.almost);
       setNinjaMeta(
         `${ninjaData.clusters.length} ${ninjaData.gggLeague ?? "Allflame"} builds from ${ninjaData.source ?? "snapshot"}`,
       );
@@ -41,12 +92,18 @@ export function Dashboard() {
   );
 
   useEffect(() => {
+    setPrefs(loadMatchPrefs());
+    setPrefsReady(true);
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const [inv, ninjaData, wikiData] = await Promise.all([
-          Promise.resolve(loadInventory()),
-          loadNinja(),
+        const inv = loadInventory();
+        const mode = parseNinjaMode(inv?.ninjaMode ?? DEFAULT_NINJA_MODE);
+        const [ninjaData, wikiData] = await Promise.all([
+          loadNinja(mode),
           loadFarmWiki(),
         ]);
         if (cancelled) return;
@@ -54,39 +111,109 @@ export function Dashboard() {
         setWiki(wikiData);
         if (!inv) {
           setShowImport(true);
-          setStatus("Import a unique list to match Allflame builds");
+          setStatus("Import a unique list to match poe.ninja builds");
           setLoadingMatches(false);
           return;
         }
         setSnapshot(inv);
-        applyMatches(inv, ninjaData, wikiData, threshold);
         setStatus(`${inv.uniques.length} unique names · ${inv.league}`);
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load");
-      } finally {
-        if (!cancelled) setLoadingMatches(false);
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Failed to load");
+          setLoadingMatches(false);
+        }
       }
     })();
     return () => {
       cancelled = true;
     };
-    // initial load only
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function onThreshold(pct: number) {
-    setThreshold(pct);
-    if (snapshot && ninja && wiki) applyMatches(snapshot, ninja, wiki, pct);
+  useEffect(() => {
+    if (!prefsReady || !snapshot || !ninja || !wiki) return;
+    const expected = parseNinjaMode(snapshot.ninjaMode);
+    const loaded = parseNinjaMode(ninja.ninjaMode);
+    if (expected !== loaded) return;
+    applyMatches(snapshot, ninja, wiki, prefs);
+    setLoadingMatches(false);
+  }, [prefsReady, snapshot, ninja, wiki, prefs, applyMatches]);
+
+  function updatePrefs(patch: Partial<MatchPrefs>) {
+    setPrefs((prev) => {
+      const next = { ...prev, ...patch };
+      saveMatchPrefs(next);
+      return next;
+    });
   }
 
   async function onImported() {
     const inv = loadInventory();
-    if (!inv || !ninja || !wiki) return;
+    if (!inv || !wiki) return;
     setSnapshot(inv);
     setShowImport(false);
-    applyMatches(inv, ninja, wiki, threshold);
     setStatus(`${inv.uniques.length} unique names · ${inv.league}`);
+    const ninjaData = await loadNinja(parseNinjaMode(inv.ninjaMode));
+    setNinja(ninjaData);
   }
+
+  async function onStashLeague(mode: LadderMode) {
+    if (!snapshot || snapshot.ladderMode === mode || leagueBusy) return;
+    const ninjaMode = LADDER_TO_NINJA[mode];
+    setError(null);
+    if (snapshot.ladderAccount && !snapshot.mock) {
+      setLeagueBusy(true);
+      setLoadingMatches(true);
+      try {
+        const inv = await importUniques({
+          url: snapshot.ladderAccount,
+          ladderMode: mode,
+          ninjaMode,
+        });
+        setSnapshot(inv);
+        setStatus(`${inv.uniques.length} unique names · ${inv.league}`);
+        setNinja(await loadNinja(ninjaMode));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "League switch failed");
+      } finally {
+        setLeagueBusy(false);
+      }
+      return;
+    }
+    const next = {
+      ...snapshot,
+      ladderMode: mode,
+      ninjaMode,
+      league: LADDER_LABEL[mode],
+      ninjaOverview: ninjaMode,
+    };
+    setLoadingMatches(true);
+    saveInventory(next);
+    setSnapshot(next);
+    setStatus(`${next.uniques.length} unique names · ${next.league}`);
+    setNinja(await loadNinja(ninjaMode));
+  }
+
+  async function onNinjaBuilds(mode: NinjaMode) {
+    if (!snapshot || snapshot.ninjaMode === mode || leagueBusy) return;
+    const next = { ...snapshot, ninjaMode: mode, ninjaOverview: mode };
+    setLoadingMatches(true);
+    saveInventory(next);
+    setSnapshot(next);
+    setNinja(await loadNinja(mode));
+  }
+
+  const ladderMode = parseLadderMode(snapshot?.ladderMode ?? DEFAULT_LADDER_MODE);
+  const ninjaMode = parseNinjaMode(snapshot?.ninjaMode ?? ninja?.ninjaMode ?? DEFAULT_NINJA_MODE);
+
+  const mustUseOptions = useMemo(() => {
+    const names = snapshot?.uniques.map((u) => u.name) ?? [];
+    if (!wiki) return prefs.mustUse ? [prefs.mustUse] : [];
+    const filtered = names.filter((name) => isMustUseUnique(name, wiki));
+    if (prefs.mustUse && !filtered.includes(prefs.mustUse)) {
+      return [prefs.mustUse, ...filtered];
+    }
+    return filtered;
+  }, [snapshot, wiki, prefs.mustUse]);
 
   return (
     <UniqueIconProvider>
@@ -101,6 +228,9 @@ export function Dashboard() {
             </h1>
             <p className="mt-2 text-sm text-muted">{status}</p>
             {ninjaMeta ? <p className="text-sm text-muted">{ninjaMeta}</p> : null}
+            {leagueBusy ? (
+              <p className="text-sm text-muted">Re-importing that league…</p>
+            ) : null}
           </div>
           <div className="flex flex-wrap gap-2">
             <button
@@ -112,6 +242,16 @@ export function Dashboard() {
             </button>
           </div>
         </div>
+
+        {snapshot ? (
+          <LeagueSelects
+            ladderMode={ladderMode}
+            ninjaMode={ninjaMode}
+            onLadderMode={onStashLeague}
+            onNinjaMode={onNinjaBuilds}
+            disabled={leagueBusy}
+          />
+        ) : null}
 
         {showImport ? <ImportPanel compact onImported={onImported} /> : null}
 
@@ -142,94 +282,149 @@ export function Dashboard() {
         ) : null}
 
         <section className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-end justify-between gap-4">
             <h2 className="text-xl font-semibold tracking-wide text-gold">
               Builds you can finish
             </h2>
             <label className="flex items-center gap-3 text-sm text-muted">
-              Match at least {threshold}%
+              Match at least {prefs.threshold}% weighted
               <input
                 type="range"
-                min={60}
+                min={50}
                 max={100}
                 step={5}
-                value={threshold}
-                onChange={(e) => onThreshold(Number(e.target.value))}
+                value={prefs.threshold}
+                onChange={(e) => updatePrefs({ threshold: Number(e.target.value) })}
                 className="accent-gold"
               />
             </label>
           </div>
+
+          <div className="panel grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3">
+            <label className="flex items-start gap-2 text-sm text-foreground">
+              <input
+                type="checkbox"
+                checked={prefs.hideChaseMissing}
+                onChange={(e) => updatePrefs({ hideChaseMissing: e.target.checked })}
+                className="mt-1 accent-gold"
+              />
+              <span>
+                Hide chase uniques I don&apos;t have
+                <span className="mt-0.5 block text-xs text-muted">
+                  {CHASE_UNIQUES.join(", ")}
+                </span>
+              </span>
+            </label>
+            <label className="flex items-start gap-2 text-sm text-foreground">
+              <input
+                type="checkbox"
+                checked={prefs.ignoreRollChase}
+                onChange={(e) => updatePrefs({ ignoreRollChase: e.target.checked })}
+                className="mt-1 accent-gold"
+              />
+              <span>
+                Ignore roll-chase uniques in the %
+                <span className="mt-0.5 block text-xs text-muted">
+                  Watcher&apos;s Eye, clusters, timeless jewels, and similar. They
+                  still show on the build.
+                </span>
+              </span>
+            </label>
+            <label className="label-caps block">
+              Must-use unique
+              <select
+                value={prefs.mustUse}
+                onChange={(e) => updatePrefs({ mustUse: e.target.value })}
+                className="field"
+              >
+                <option value="">Any unique</option>
+                {mustUseOptions.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+              <span className="mt-0.5 block text-xs font-normal normal-case tracking-normal text-muted">
+                T0–T2 and pinnacle boss drops you own.
+              </span>
+            </label>
+            <label className="label-caps block">
+              Class
+              <select
+                value={prefs.classFilter}
+                onChange={(e) => updatePrefs({ classFilter: e.target.value })}
+                className="field"
+              >
+                <option value="">All classes</option>
+                {filters.classes.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="label-caps block">
+              Skill
+              <select
+                value={prefs.skillFilter}
+                onChange={(e) => updatePrefs({ skillFilter: e.target.value })}
+                className="field"
+              >
+                <option value="">All skills</option>
+                {filters.skills.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
           {loadingMatches ? (
             <p className="text-sm text-muted">Matching builds…</p>
-          ) : matches.length === 0 && snapshot ? (
-            <p className="text-sm text-muted">
-              No builds at this threshold. Lower the slider or import a fuller unique list.
-            </p>
           ) : !snapshot ? (
             <p className="text-sm text-muted">
-              Import uniques (or try the demo on the home page) to see matching Allflame builds.
+              Import uniques (or try the demo on the home page) to see matching builds.
+            </p>
+          ) : ninja && ninja.clusters.length === 0 ? (
+            <p className="text-sm text-muted">
+              No poe.ninja build snapshot for {ninja.gggLeague ?? ninjaMode} right now.
+              Switch to another build league, or wait for the next site refresh.
+            </p>
+          ) : matches.length === 0 && almost.length === 0 ? (
+            <p className="text-sm text-muted">
+              No builds at this threshold. Lower the slider, turn off a filter, or
+              import a fuller unique list.
             </p>
           ) : (
-            <ul className="space-y-3">
-              {matches.map((row) => (
-                <li key={row.cluster.id} className="panel p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <p className="font-display text-lg tracking-wide">
-                        <span className="text-gold-bright">
-                          {row.cluster.mainSkill ?? "Unknown skill"}
-                        </span>{" "}
-                        <span className="text-muted">
-                          {row.cluster.ascendancy || row.cluster.className}
-                        </span>
-                      </p>
-                      <p className="text-sm text-muted">
-                        {Math.round(row.score * 100)}% unique overlap ·{" "}
-                        {row.owned.length}/{row.cluster.uniqueNames.length} owned ·{" "}
-                        {row.cluster.characterCount} ninja characters
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setOpenId(openId === row.cluster.id ? null : row.cluster.id)
-                        }
-                        className="btn-outline h-9 px-3 text-[0.7rem]"
-                      >
-                        {openId === row.cluster.id ? "Hide farm" : "Farm missing"}
-                      </button>
-                      <Link
-                        href={`/app/builds/${row.cluster.id}`}
-                        className="btn-gold h-9 px-3 text-[0.7rem]"
-                      >
-                        Details
-                      </Link>
-                    </div>
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    {row.cluster.uniqueNames.map((name) => (
-                      <UniqueChip
-                        key={name}
-                        name={name}
-                        owned={row.owned.includes(name)}
-                      />
-                    ))}
-                  </div>
-                  {row.variantWarnings.length > 0 ? (
-                    <p className="mt-3 text-xs text-unique">
-                      Roll-dependent: {row.variantWarnings.join(", ")}. Owning the
-                      name is not the same as owning the right mods.
-                    </p>
-                  ) : null}
-                  {openId === row.cluster.id ? (
-                    <div className="mt-4">
-                      <FarmList hints={row.farm} />
-                    </div>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
+            <>
+              {matches.length === 0 ? (
+                <p className="text-sm text-muted">
+                  No builds at {prefs.threshold}% weighted. Near-misses are below.
+                </p>
+              ) : (
+                <BuildMatchList
+                  rows={matches}
+                  openId={openId}
+                  onToggleFarm={(id) => setOpenId(openId === id ? null : id)}
+                />
+              )}
+              {almost.length > 0 ? (
+                <div className="space-y-3 pt-4">
+                  <h3 className="text-lg font-semibold tracking-wide text-gold">
+                    Almost ({Math.round(NEAR_MISS_FLOOR * 100)}–{prefs.threshold - 1}% weighted)
+                  </h3>
+                  <p className="text-sm text-muted">
+                    Below the slider, still at least 50%. Same filters as above.
+                  </p>
+                  <BuildMatchList
+                    rows={almost}
+                    openId={openId}
+                    onToggleFarm={(id) => setOpenId(openId === id ? null : id)}
+                  />
+                </div>
+              ) : null}
+            </>
           )}
         </section>
       </main>

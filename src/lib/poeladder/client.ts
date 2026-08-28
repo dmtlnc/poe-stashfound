@@ -1,6 +1,7 @@
 import { ninjaUserAgent } from "../config";
 import { parsePoeladderAccount } from "../import/parse";
-import { pickCurrentSsfLadder, type PoeladderLadder } from "./ladders";
+import { pickLadderByMode, type PoeladderLadder } from "./ladders";
+import { DEFAULT_LADDER_MODE, parseLadderMode, type LadderMode } from "../leagues/modes";
 
 const BASE = "https://poeladder.com/api/v1";
 const BUNDLE_RE = /\/assets\/index-[^"]+\.js/;
@@ -53,14 +54,14 @@ export type LadderUniquesResult = {
   accountHint: string;
 };
 
-async function resolveCurrentSsfLadder(): Promise<string> {
+async function resolveLadder(mode: LadderMode = DEFAULT_LADDER_MODE): Promise<string> {
   const override = process.env.POE_LADDER_IDENTIFIER?.trim();
   if (override) return override;
   const res = await poeladderGet(`${BASE}/ladders`);
   if (!res.ok) throw new Error(`PoE Ladder ladders failed (${res.status})`);
   const ladders = (await res.json()) as PoeladderLadder[];
-  const pick = pickCurrentSsfLadder(ladders);
-  if (!pick) throw new Error("Could not detect the current SSF ladder on PoE Ladder.");
+  const pick = pickLadderByMode(ladders, mode);
+  if (!pick) throw new Error("Could not detect that SSF ladder on PoE Ladder.");
   return pick.identifier;
 }
 
@@ -102,6 +103,7 @@ export async function fetchOwnedUniques(
 
 export async function fetchUniquesFromPoeladderInput(
   raw: string,
+  ladderMode?: LadderMode,
 ): Promise<LadderUniquesResult> {
   const parsed = parsePoeladderAccount(raw);
   if (!parsed?.user) {
@@ -109,6 +111,7 @@ export async function fetchUniquesFromPoeladderInput(
       "Need a PoE Ladder account like name-1234, or a Uniques URL with user=.",
     );
   }
-  const ladder = parsed.ladderIdentifier || (await resolveCurrentSsfLadder());
+  const ladder =
+    parsed.ladderIdentifier || (await resolveLadder(parseLadderMode(ladderMode)));
   return fetchOwnedUniques(parsed.user, ladder);
 }

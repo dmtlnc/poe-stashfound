@@ -1,14 +1,17 @@
 import { DemoButton } from "@/components/DemoButton";
 import { ImportPanel } from "@/components/ImportPanel";
+import { ContactLine } from "@/components/ContactLine";
 
 export default function Home() {
   return (
     <div className="flex flex-1 flex-col">
       <header className="px-6 py-5">
-        <div className="mx-auto flex max-w-5xl items-baseline justify-between">
-          <p className="brand text-lg">Stashfound</p>
-          <p className="label-caps">PoE1 SSF Allflame</p>
+        <div className="mx-auto flex max-w-5xl items-center gap-3">
+          <p className="brand shrink-0 text-lg">Stashfound</p>
+          <ContactLine className="hidden min-w-0 flex-1 text-center text-xs leading-5 text-muted lg:block" />
+          <p className="ml-auto shrink-0 label-caps">PoE1 SSF unique matcher</p>
         </div>
+        <ContactLine className="mx-auto mt-3 max-w-5xl text-center text-xs leading-5 text-muted lg:hidden" />
         <div className="rule mt-4" />
       </header>
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center gap-10 px-6 py-16">
@@ -18,9 +21,10 @@ export default function Home() {
             What can you build with the uniques you already found?
           </h1>
           <p className="text-lg leading-8 text-muted">
-            Import unique names from PoE Ladder (account tag or URL), then rank current
-            Allflame poe.ninja builds by unique-name overlap. Missing pieces come with
-            farm notes — this is SSF, so nobody is selling them to you.
+            Import unique names from PoE Ladder (account tag or URL), then rank
+            Standard / Allflame poe.ninja builds by unique-name overlap.
+            Missing pieces come with farm notes — this is SSF, so nobody is selling
+            them to you.
           </p>
         </div>
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
@@ -39,12 +43,13 @@ export default function Home() {
             that the roll still matters.
           </li>
           <li className="panel p-4">
-            Default match is 70% of a build&apos;s uniques. The rest is a farm
-            list, not a trade whisper.
+            Default match is 70% weighted overlap — missing a T0 hurts more
+            than a T4. The rest is a farm list, not a trade whisper.
           </li>
           <li className="panel p-4">
-            Allflame poe.ninja builds ship as static JSON and refresh when the
-            site is rebuilt — not fetched from your browser.
+            poe.ninja builds for Standard, Allflame, and Allflame HC
+            ship as static JSON and refresh when the site is rebuilt — not fetched
+            from your browser.
           </li>
         </ul>
       </main>

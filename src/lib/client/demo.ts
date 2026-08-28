@@ -29,5 +29,7 @@ export function buildDemoSnapshot(): InventorySnapshot {
     uniques: [...acc.values()].sort((a, b) => a.name.localeCompare(b.name)),
     tabCount: MOCK_STASH_TABS.length,
     characterCount: MOCK_CHARACTERS.length,
+    ladderMode: "ssf-allflame",
+    ninjaMode: "allflame",
   };
 }

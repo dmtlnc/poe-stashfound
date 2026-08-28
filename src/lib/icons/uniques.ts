@@ -4,7 +4,7 @@ import { cargoQuery, itemName } from "../farm/wiki";
 import { fetchIndexState, fetchUniqueIcons } from "../ninja/client";
 
 const CACHE_MS = 7 * 24 * 60 * 60 * 1000;
-const CACHE_VERSION = 2;
+const CACHE_VERSION = 3;
 const cacheFile = path.join(process.cwd(), "data/cache/unique-icons.json");
 const SKIP_CLASS = new Set(["Map"]);
 
@@ -26,23 +26,24 @@ function filePathUrl(file: string): string | undefined {
   return `https://www.poewiki.net/wiki/Special:FilePath/${slug}`;
 }
 
-async function tradeLeagueName(): Promise<string> {
+async function tradeLeagueNames(): Promise<string[]> {
   try {
     const idx = await fetchIndexState();
-    return (
-      idx.economyLeagues?.find(
-        (l) => !/hardcore|standard/i.test(l.name) && !/^ssf /i.test(l.name),
-      )?.name ?? "Standard"
-    );
+    const names = (idx.economyLeagues ?? [])
+      .filter((l) => !/^ssf /i.test(l.name) && !/ruthless/i.test(l.name))
+      .map((l) => l.name);
+    return names.length ? [...new Set(names)] : ["Standard"];
   } catch {
-    return "Standard";
+    return ["Standard", "Allflame"];
   }
 }
 
 async function buildIndex(): Promise<UniqueIconIndex> {
   const icons: Record<string, string> = {};
   try {
-    Object.assign(icons, await fetchUniqueIcons(await tradeLeagueName()));
+    for (const league of await tradeLeagueNames()) {
+      Object.assign(icons, await fetchUniqueIcons(league));
+    }
   } catch (err) {
     console.error("ninja unique icons failed", err);
   }

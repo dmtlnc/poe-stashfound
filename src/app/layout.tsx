@@ -17,7 +17,7 @@ const sourceSans = Source_Sans_3({
 export const metadata: Metadata = {
   title: "Stashfound — PoE1 SSF unique matcher",
   description:
-    "Import your SSF uniques and find current Allflame poe.ninja builds you can finish by farming the rest.",
+    "Import your SSF uniques and find poe.ninja builds you can finish by farming the rest.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

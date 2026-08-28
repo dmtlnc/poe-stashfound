@@ -27,7 +27,7 @@ Open [http://localhost:3000](http://localhost:3000). Enter a PoE Ladder account 
 1. Enter your PoE Ladder account tag (`name-1234` or `name#1234`), or paste your [Uniques page](https://poeladder.com/uniques) URL (needs the Worker).
 2. CSV export and a pasted name list stay in the browser and work without the Worker.
 
-The website is **GitHub Pages**. The Cloudflare Worker is **Ladder import only** (`poe-stashfound` on workers.dev). Disconnect any Cloudflare Git project that tries to build this whole repo as a site.
+The website is **GitHub Pages**. The Cloudflare Worker is **Ladder import only** (`https://poe-stashfound.poessf.workers.dev`). Disconnect any Cloudflare Git project that tries to build this whole repo as a site.
 
 ```bash
 npm run worker:deploy

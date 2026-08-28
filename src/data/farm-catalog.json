@@ -21,8 +21,11 @@
   },
   "Bottled Faith": {
     "kind": "boss",
-    "summary": "Drops from Sirus, Awakener of Worlds (and Uber Sirus).",
-    "notes": ["Run Sirus awakener fights; quality/incubation does not replace the boss drop."]
+    "summary": "Drops from Venarius in Cortex (the Synthesis unique map). Wait for his post-fight monologue before leaving.",
+    "cards": [
+      { "name": "Succor of the Sinless", "stack": 6, "where": "Sanctuary and related Synthesis map content" }
+    ],
+    "notes": ["Not a Sirus drop. Farm Cortex (or The Feared). Uber Venarius is a different unique pool."]
   },
   "Dying Sun": {
     "kind": "boss",
