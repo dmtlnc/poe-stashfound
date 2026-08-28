@@ -19,6 +19,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -26,10 +27,12 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run refresh-data
+        timeout-minutes: 20
       - run: npm run build:static
         env:
           STATIC_EXPORT: "1"
-          NEXT_PUBLIC_IMPORT_URL: ${{ vars.IMPORT_URL || 'https://poe-stashfound.dimalecnhuk.workers.dev' }}
+          NEXT_PUBLIC_IMPORT_URL: ${{ vars.IMPORT_URL || 'https://stashfound-import.dimalecnhuk.workers.dev' }}
           NEXT_PUBLIC_BASE_PATH: ${{ vars.BASE_PATH || '/poe-stashfound' }}
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
       - uses: actions/upload-pages-artifact@v3

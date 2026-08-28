@@ -8,6 +8,7 @@
     "build": "next build",
     "prebuild": "node scripts/prepare-static.mjs",
     "build:static": "node scripts/prepare-static.mjs && STATIC_EXPORT=1 next build",
+    "refresh-data": "npx --yes tsx scripts/refresh-static-data.ts",
     "start": "next start",
     "lint": "eslint",
     "worker": "npx --yes wrangler@4 dev --env-file worker/.dev.vars",

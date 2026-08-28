@@ -49,7 +49,7 @@ const worker = {
     }
 
     const url = new URL(request.url);
-    if (request.method === "GET" && url.pathname === "/health") {
+    if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/health")) {
       return json({ ok: true }, 200, allowed);
     }
 

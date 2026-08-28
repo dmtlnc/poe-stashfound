@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { publicUrl } from "@/lib/client/base";
 
 let cached: Record<string, string> | null = null;
 let inflight: Promise<Record<string, string>> | null = null;
@@ -8,8 +9,7 @@ let inflight: Promise<Record<string, string>> | null = null;
 function loadIcons(): Promise<Record<string, string>> {
   if (cached) return Promise.resolve(cached);
   if (inflight) return inflight;
-  const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-  inflight = fetch(`${base}/data/icons.json`)
+  inflight = fetch(publicUrl("/data/icons.json"))
     .then(async (r) => {
       if (!r.ok) return {} as Record<string, string>;
       const data: unknown = await r.json();

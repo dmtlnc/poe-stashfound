@@ -51,7 +51,7 @@ async function fetchFromWorker(url: string, turnstileToken?: string): Promise<st
       "Live PoE Ladder import is not configured. Export CSV from the Uniques page and upload it.",
     );
   }
-  const endpoint = worker ? `${worker}/import` : "/import";
+  const endpoint = `${worker}/import`;
 
   let res: Response;
   try {
