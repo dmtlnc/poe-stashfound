@@ -29,7 +29,7 @@ jobs:
       - run: npm run build:static
         env:
           STATIC_EXPORT: "1"
-          NEXT_PUBLIC_IMPORT_URL: ${{ vars.IMPORT_URL }}
+          NEXT_PUBLIC_IMPORT_URL: ${{ vars.IMPORT_URL || 'https://poe-stashfound.dimalecnhuk.workers.dev' }}
           NEXT_PUBLIC_BASE_PATH: ${{ vars.BASE_PATH || '/poe-stashfound' }}
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
       - uses: actions/upload-pages-artifact@v3

@@ -4,11 +4,12 @@ export function publicUrl(path: string): string {
   return `${base}${p}`;
 }
 
-/** Empty string disables live Ladder import. Unset falls back to local wrangler. */
+/** Unset = local wrangler. Empty = same origin (Cloudflare). `disabled` turns it off. */
 export function importWorkerUrl(): string | null {
   const raw = process.env.NEXT_PUBLIC_IMPORT_URL;
-  if (raw === "") return null;
-  return (raw ?? "http://127.0.0.1:8787").replace(/\/$/, "");
+  if (raw === "disabled") return null;
+  if (raw == null) return "http://127.0.0.1:8787";
+  return raw.replace(/\/$/, "");
 }
 
 export function turnstileSiteKey(): string | null {

@@ -36,3 +36,13 @@ Missing uniques use [List of divination cards](https://www.poewiki.net/wiki/List
 v1 matches **unique names only** (70% default, slider 60–100%). Unique maps are ignored. Items like Watcher's Eye, Forbidden Flesh/Flame, cluster jewels, and timeless jewels show a warning: owning the name is not the same as owning the right roll.
 
 Allflame poe.ninja builds ship as static JSON and refresh when the site is rebuilt.
+
+## Cloudflare
+
+Workers & Pages project **poe-stashfound** (Git connected):
+
+1. Set **Build command** to `npm run build:static` (or leave it empty — `wrangler.toml` runs that before deploy).
+2. Leave **Deploy command** as `npx wrangler deploy`.
+3. Do **not** set `NEXT_PUBLIC_BASE_PATH` on Cloudflare (the `*.workers.dev` URL is at the site root).
+4. Live Ladder import is `POST /import` on the same host.
+

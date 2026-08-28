@@ -41,7 +41,7 @@ let jwtMemory: JwtMemory | null = null;
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const origin = request.headers.get("Origin");
-    const allowed = allowedOrigin(origin, env.ALLOWED_ORIGINS);
+    const allowed = allowedOrigin(origin, env.ALLOWED_ORIGINS, request.url);
 
     if (request.method === "OPTIONS") {
       if (!allowed) return new Response(null, { status: 403 });
@@ -49,7 +49,7 @@ const worker = {
     }
 
     const url = new URL(request.url);
-    if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/health")) {
+    if (request.method === "GET" && url.pathname === "/health") {
       return json({ ok: true }, 200, allowed);
     }
 
@@ -227,7 +227,11 @@ function assertPoeladder(res: Response) {
   if (host !== "poeladder.com") throw new Error("upstream");
 }
 
-function allowedOrigin(origin: string | null, allowCsv: string): string | null {
+function allowedOrigin(
+  origin: string | null,
+  allowCsv: string,
+  requestUrl: string,
+): string | null {
   if (!origin) return null;
   let normalized: string;
   try {
@@ -236,6 +240,11 @@ function allowedOrigin(origin: string | null, allowCsv: string): string | null {
     normalized = `${u.protocol}//${u.host}`;
   } catch {
     return null;
+  }
+  try {
+    if (normalized === new URL(requestUrl).origin) return normalized;
+  } catch {
+    // fall through to allowlist
   }
   const allowed = (allowCsv || "")
     .split(",")

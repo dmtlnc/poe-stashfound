@@ -46,15 +46,16 @@ export async function importUniques(opts: {
 
 async function fetchFromWorker(url: string, turnstileToken?: string): Promise<string[]> {
   const worker = importWorkerUrl();
-  if (!worker) {
+  if (worker == null) {
     throw new Error(
       "Live PoE Ladder import is not configured. Export CSV from the Uniques page and upload it.",
     );
   }
+  const endpoint = worker ? `${worker}/import` : "/import";
 
   let res: Response;
   try {
-    res = await fetch(`${worker}/import`, {
+    res = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({ url, turnstileToken }),
