@@ -1,0 +1,89 @@
+{
+  "clusters": [
+    {
+      "id": "deadeye-windripper",
+      "className": "Deadeye",
+      "ascendancy": "Deadeye",
+      "mainSkill": "Lightning Arrow",
+      "uniqueNames": [
+        "Windripper",
+        "Asenath's Gentle Touch",
+        "Thunderfist",
+        "Goldwyrm",
+        "Dying Sun",
+        "Inspired Learning",
+        "Watcher's Eye"
+      ],
+      "characterCount": 48,
+      "example": { "account": "NinjaSSF", "name": "LADeadeye", "level": 100 },
+      "ninjaUrl": "https://poe.ninja/builds/char/NinjaSSF/LADeadeye?overview=ssf-demo&type=exp"
+    },
+    {
+      "id": "chieftain-rf",
+      "className": "Chieftain",
+      "ascendancy": "Chieftain",
+      "mainSkill": "Righteous Fire",
+      "uniqueNames": [
+        "The Surrender",
+        "Kaom's Heart",
+        "Xoph's Blood",
+        "Rise of the Phoenix",
+        "Bottled Faith",
+        "Rumi's Concoction"
+      ],
+      "characterCount": 36,
+      "example": { "account": "NinjaSSF", "name": "RFChief", "level": 99 },
+      "ninjaUrl": "https://poe.ninja/builds/char/NinjaSSF/RFChief?overview=ssf-demo&type=exp"
+    },
+    {
+      "id": "jugg-boneshatter",
+      "className": "Juggernaut",
+      "ascendancy": "Juggernaut",
+      "mainSkill": "Boneshatter",
+      "uniqueNames": [
+        "The Iron Fortress",
+        "Kaom's Roots",
+        "The Bringer of Rain",
+        "Lion's Roar",
+        "Bloodgrip"
+      ],
+      "characterCount": 22,
+      "example": { "account": "NinjaSSF", "name": "BoneJugg", "level": 97 },
+      "ninjaUrl": "https://poe.ninja/builds/char/NinjaSSF/BoneJugg?overview=ssf-demo&type=exp"
+    },
+    {
+      "id": "inquisitor-spark",
+      "className": "Inquisitor",
+      "ascendancy": "Inquisitor",
+      "mainSkill": "Spark",
+      "uniqueNames": [
+        "Shavronne's Wrappings",
+        "Presence of Chayula",
+        "Callinellus Malleus",
+        "Capricious",
+        "Original Sin",
+        "Mageblood",
+        "Progenesis",
+        "Watcher's Eye"
+      ],
+      "characterCount": 19,
+      "example": { "account": "NinjaSSF", "name": "SparkInq", "level": 100 },
+      "ninjaUrl": "https://poe.ninja/builds/char/NinjaSSF/SparkInq?overview=ssf-demo&type=exp"
+    },
+    {
+      "id": "saboteur-hexblast",
+      "className": "Saboteur",
+      "ascendancy": "Saboteur",
+      "mainSkill": "Hexblast",
+      "uniqueNames": [
+        "The Covenant",
+        "Heartbound Loop",
+        "Skin of the Lords",
+        "Mageblood"
+      ],
+      "characterCount": 14,
+      "example": { "account": "NinjaSSF", "name": "HexSabo", "level": 98 },
+      "ninjaUrl": "https://poe.ninja/builds/char/NinjaSSF/HexSabo?overview=ssf-demo&type=exp"
+    }
+  ]
+}

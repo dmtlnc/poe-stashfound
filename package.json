@@ -1,0 +1,32 @@
+{
+  "name": "stashfound",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "predev": "node scripts/prepare-static.mjs",
+    "build": "next build",
+    "prebuild": "node scripts/prepare-static.mjs",
+    "build:static": "node scripts/prepare-static.mjs && STATIC_EXPORT=1 next build",
+    "start": "next start",
+    "lint": "eslint",
+    "worker": "npx --yes wrangler@4 dev --env-file worker/.dev.vars",
+    "worker:deploy": "npx --yes wrangler@4 deploy --env-file worker/.dev.vars"
+  },
+  "dependencies": {
+    "iron-session": "^8.0.4",
+    "next": "16.3.3",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.3",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

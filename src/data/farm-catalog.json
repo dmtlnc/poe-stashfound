@@ -1,0 +1,413 @@
+{
+  "Headhunter": {
+    "kind": "divination",
+    "summary": "Almost never a raw drop you plan around. Farm The Doctor (8) in Burial Chambers / Spider Forest / Overgrown Shrine style maps, or The Hunt where it still drops.",
+    "cards": [
+      { "name": "The Doctor", "stack": 8, "where": "Burial Chambers, Spider Forest, Overgrown Ruin" },
+      { "name": "The Hunt", "stack": 4, "where": "selected high-tier maps" }
+    ],
+    "notes": ["World drop exists but is not a realistic SSF plan."]
+  },
+  "Mageblood": {
+    "kind": "divination",
+    "summary": "Chase unique. Farm The Price of Devotion / relevant cards if enabled this league; otherwise treat as a lucky world/boss drop.",
+    "cards": [{ "name": "The Price of Devotion", "stack": 8, "where": "high-tier maps / league card pool" }],
+    "notes": ["Do not plan a league around this dropping."]
+  },
+  "Watcher's Eye": {
+    "kind": "boss",
+    "summary": "Drops from Elder, Uber Elder, and related Maven/Uber content. The roll is the item — farm many copies.",
+    "notes": ["Shaper/Elder map bosses and Uber Elder are the classic sources.", "Matching the name is not enough; you need the right aura mods."]
+  },
+  "Bottled Faith": {
+    "kind": "boss",
+    "summary": "Drops from Sirus, Awakener of Worlds (and Uber Sirus).",
+    "notes": ["Run Sirus awakener fights; quality/incubation does not replace the boss drop."]
+  },
+  "Dying Sun": {
+    "kind": "boss",
+    "summary": "Drops from The Shaper.",
+    "notes": ["Shaper map fragments → Shaper fight. Uber Shaper also drops it."]
+  },
+  "Progenesis": {
+    "kind": "boss",
+    "summary": "Uber Maven drop (The Maven's Cry / Uber Maven).",
+    "notes": ["Invitation + Uber Maven. Not the normal Maven fight."]
+  },
+  "Original Sin": {
+    "kind": "boss",
+    "summary": "Uber Eater of Worlds drop.",
+    "notes": ["Need the Uber Eater fight, not the atlas Eater."]
+  },
+  "Defiance of Destiny": {
+    "kind": "boss",
+    "summary": "Uber Searing Exarch drop.",
+    "notes": ["Uber Exarch, not the atlas Exarch."]
+  },
+  "Ralakesh's Impatience": {
+    "kind": "world_drop",
+    "summary": "World drop unique. Run maps at or above its drop level; it is relatively common compared to chase uniques."
+  },
+  "The Ivory Tower": {
+    "kind": "world_drop",
+    "summary": "World drop. Farm high-level maps; not boss-gated."
+  },
+  "Windripper": {
+    "kind": "world_drop",
+    "summary": "World drop unique bow. Maps at a high drop level; no specific boss.",
+    "cards": [{ "name": "The Warden", "stack": 4, "where": "various maps" }]
+  },
+  "Asenath's Gentle Touch": {
+    "kind": "world_drop",
+    "summary": "World drop gloves. Common enough to farm passively while mapping."
+  },
+  "Thunderfist": {
+    "kind": "world_drop",
+    "summary": "World drop gloves."
+  },
+  "Goldwyrm": {
+    "kind": "world_drop",
+    "summary": "World drop boots. Often shows up while mapping; not boss-specific."
+  },
+  "Inspired Learning": {
+    "kind": "world_drop",
+    "summary": "World drop jewel. Farm maps; multiple copies are normal in SSF.",
+    "cards": [{ "name": "The Jeweller's Boon", "stack": 5, "where": "check wiki for current drop areas" }]
+  },
+  "Lioneye's Fall": {
+    "kind": "world_drop",
+    "summary": "World drop jewel. Roll-dependent if a build needs a specific allocation."
+  },
+  "The Surrender": {
+    "kind": "divination",
+    "summary": "Can world-drop; The Innocent (10) is the targeted farm for the shield.",
+    "cards": [{ "name": "The Innocent", "stack": 10, "where": "high-tier maps / check wiki" }]
+  },
+  "Kaom's Heart": {
+    "kind": "divination",
+    "summary": "World drop and The King's Heart (8). Kaom's Stronghold / volcanic maps are traditional flavour, not a guarantee.",
+    "cards": [{ "name": "The King's Heart", "stack": 8, "where": "Kaom-themed maps and high fire maps" }]
+  },
+  "Xoph's Blood": {
+    "kind": "league_mechanic",
+    "summary": "Breach unique from Xoph. Open Xoph breaches / Xoph's Domain (Chayula/Breachstones as applicable this league).",
+    "notes": ["Blessed / upgraded Breachstone if the league still has them."]
+  },
+  "Rise of the Phoenix": {
+    "kind": "world_drop",
+    "summary": "World drop armour. Farm high-level maps."
+  },
+  "Rumi's Concoction": {
+    "kind": "world_drop",
+    "summary": "World drop flask. Mapping is the farm."
+  },
+  "Kaom's Roots": {
+    "kind": "world_drop",
+    "summary": "World drop boots. Fairly common while mapping."
+  },
+  "The Iron Fortress": {
+    "kind": "world_drop",
+    "summary": "World drop body armour."
+  },
+  "The Bringer of Rain": {
+    "kind": "world_drop",
+    "summary": "World drop helmet. Classic mapping unique; 6-link is a separate project (or Tabula / vendor 6L)."
+  },
+  "Lion's Roar": {
+    "kind": "world_drop",
+    "summary": "World drop flask. Very common."
+  },
+  "Bloodgrip": {
+    "kind": "world_drop",
+    "summary": "World drop amulet."
+  },
+  "Shavronne's Wrappings": {
+    "kind": "world_drop",
+    "summary": "World drop ES armour. High drop level maps.",
+    "cards": [{ "name": "The Incantation", "stack": 4, "where": "check wiki" }]
+  },
+  "Presence of Chayula": {
+    "kind": "league_mechanic",
+    "summary": "Chayula Breach unique. Run Chayula breaches / Chayula's Domain.",
+    "notes": ["Pure Chayula Breachstone is the targeted farm."]
+  },
+  "Callinellus Malleus": {
+    "kind": "world_drop",
+    "summary": "World drop mace."
+  },
+  "Capricious": {
+    "kind": "world_drop",
+    "summary": "World drop sceptre. Confirm the exact unique name on wiki if it was renamed this league."
+  },
+  "The Covenant": {
+    "kind": "world_drop",
+    "summary": "World drop ES/life armour."
+  },
+  "Heartbound Loop": {
+    "kind": "world_drop",
+    "summary": "World drop ring. Common mapping unique."
+  },
+  "Skin of the Lords": {
+    "kind": "league_mechanic",
+    "summary": "Uber Atziri / Apex of Sacrifice / The Alluring Abyss. The implicit is the item.",
+    "notes": ["Farm Vaal fragments, then Atziri, then Uber Atziri.", "Roll-dependent: you need the right keystone implicit."]
+  },
+  "Skin of the Loyal": {
+    "kind": "league_mechanic",
+    "summary": "Atziri in The Apex of Sacrifice (normal Atziri)."
+  },
+  "Forbidden Flesh": {
+    "kind": "boss",
+    "summary": "Searing Exarch drop (atlas boss). The allocated notable is everything.",
+    "notes": ["Farm Exarch invitations. Matching the name is not enough."]
+  },
+  "Forbidden Flame": {
+    "kind": "boss",
+    "summary": "Eater of Worlds drop (atlas boss). Notable must match the build.",
+    "notes": ["Farm Eater invitations."]
+  },
+  "Goldrim": {
+    "kind": "world_drop",
+    "summary": "Very common world drop. Campaign and maps both drop it constantly."
+  },
+  "Tabula Rasa": {
+    "kind": "divination",
+    "summary": "Common world drop, or The Celestial Justicar / Humility cards. Vendor 6-socket whites if you only need the 6-link.",
+    "cards": [{ "name": "Humility", "stack": 9, "where": "early maps" }]
+  },
+  "Wanderlust": {
+    "kind": "world_drop",
+    "summary": "Levelling unique. Drops throughout the campaign."
+  },
+  "Praxis": {
+    "kind": "world_drop",
+    "summary": "World drop ring. Common."
+  },
+  "Karui Ward": {
+    "kind": "world_drop",
+    "summary": "Campaign / early mapping unique amulet."
+  },
+  "Lifesprig": {
+    "kind": "world_drop",
+    "summary": "Levelling wand. Act 1–3 drops."
+  },
+  "Lochtonial Caress": {
+    "kind": "world_drop",
+    "summary": "Levelling gloves. Campaign drop."
+  },
+  "Dream Fragments": {
+    "kind": "world_drop",
+    "summary": "World drop ring. Mapping."
+  },
+  "The Baron": {
+    "kind": "world_drop",
+    "summary": "World drop helmet. Used for spectres / minion block setups."
+  },
+  "Quill Rain": {
+    "kind": "world_drop",
+    "summary": "World drop bow. Common; campaign and maps."
+  },
+  "Chin Sol": {
+    "kind": "world_drop",
+    "summary": "World drop bow."
+  },
+  "Voltaxic Rift": {
+    "kind": "world_drop",
+    "summary": "World drop bow. Higher drop level."
+  },
+  "Starforge": {
+    "kind": "boss",
+    "summary": "Shaper drop (The Shaper).",
+    "notes": ["Same fight as Dying Sun / Shaper's Touch line."]
+  },
+  "Atziri's Disfavour": {
+    "kind": "league_mechanic",
+    "summary": "Uber Atziri (The Alluring Abyss)."
+  },
+  "Aegis Aurora": {
+    "kind": "world_drop",
+    "summary": "World drop shield. High drop level maps.",
+    "cards": [{ "name": "The Union", "stack": 7, "where": "check wiki" }]
+  },
+  "Svalinn": {
+    "kind": "world_drop",
+    "summary": "World drop shield. Often found while mapping."
+  },
+  "Mahuxotl's Machination": {
+    "kind": "boss",
+    "summary": "The Trialmaster (Ultimatum) drop.",
+    "notes": ["Run Ultimatum encounters through to The Trialmaster."]
+  },
+  "The Gull": {
+    "kind": "world_drop",
+    "summary": "World drop helmet."
+  },
+  "The Saviour": {
+    "kind": "boss",
+    "summary": "Sirus drop. Weapon has variable implicits.",
+    "notes": ["Roll-dependent."]
+  },
+  "Thread of Hope": {
+    "kind": "boss",
+    "summary": "Searing Exarch drop. Radius/keystone layout is the roll."
+  },
+  "Impossible Escape": {
+    "kind": "boss",
+    "summary": "Eater of Worlds drop. Keystone allocation is the roll."
+  },
+  "Elegant Hubris": {
+    "kind": "league_mechanic",
+    "summary": "Timeless Jewel from Eternal / Legion (Cadiro). Farm Legion encounters / timeless splints.",
+    "notes": ["Seed and keystone must match the PoB."]
+  },
+  "Lethal Pride": {
+    "kind": "league_mechanic",
+    "summary": "Karui Timeless Jewel. Legion encounters."
+  },
+  "Brutal Restraint": {
+    "kind": "league_mechanic",
+    "summary": "Maraketh Timeless Jewel. Legion encounters."
+  },
+  "Glorious Vanity": {
+    "kind": "league_mechanic",
+    "summary": "Vaal Timeless Jewel. Legion encounters."
+  },
+  "Militant Faith": {
+    "kind": "league_mechanic",
+    "summary": "Templar Timeless Jewel. Legion encounters."
+  },
+  "Voices": {
+    "kind": "league_mechanic",
+    "summary": "Delve unique jewel. Deep Delve cities / Kurgal / Ahuatotli / Niko content.",
+    "notes": ["1-passive Voices is the chase roll."]
+  },
+  "Megalomaniac": {
+    "kind": "league_mechanic",
+    "summary": "Delve unique jewel. Cluster notables are random."
+  },
+  "Large Cluster Jewel": {
+    "kind": "league_mechanic",
+    "summary": "Not a unique in the usual sense — cluster jewels drop from Delirium. Farm mirrors / Delirium maps.",
+    "notes": ["Treat as a crafting project, not a unique name match."]
+  },
+  "Medium Cluster Jewel": {
+    "kind": "league_mechanic",
+    "summary": "Delirium cluster jewel. Farm Delirium."
+  },
+  "Small Cluster Jewel": {
+    "kind": "league_mechanic",
+    "summary": "Delirium cluster jewel. Farm Delirium."
+  },
+  "Split Personality": {
+    "kind": "league_mechanic",
+    "summary": "Delve unique jewel. Attributes/life rolls vary."
+  },
+  "The Green Nightmare": {
+    "kind": "league_mechanic",
+    "summary": "Upgrade path from The Green Dream (Chayula / Breach related). Check wiki for the exact vendor/blessing recipe this league."
+  },
+  "The Red Nightmare": {
+    "kind": "league_mechanic",
+    "summary": "Upgrade from The Red Dream via Breach blessing recipe."
+  },
+  "The Blue Nightmare": {
+    "kind": "league_mechanic",
+    "summary": "Upgrade from The Blue Dream via Breach blessing recipe."
+  },
+  "The Green Dream": {
+    "kind": "league_mechanic",
+    "summary": "Chayula / Esh-adjacent Breach unique. Farm the matching Breach."
+  },
+  "The Red Dream": {
+    "kind": "league_mechanic",
+    "summary": "Xoph Breach unique."
+  },
+  "The Blue Dream": {
+    "kind": "league_mechanic",
+    "summary": "Esh Breach unique."
+  },
+  "The Light of Meaning": {
+    "kind": "world_drop",
+    "summary": "Unique jewel with variable mods. World drop; rolls matter."
+  },
+  "The Golden Rule": {
+    "kind": "world_drop",
+    "summary": "Unique jewel. Roll-dependent."
+  },
+  "Shaper's Touch": {
+    "kind": "boss",
+    "summary": "The Shaper."
+  },
+  "Voidwalker": {
+    "kind": "boss",
+    "summary": "The Shaper."
+  },
+  "Solstice Vigil": {
+    "kind": "boss",
+    "summary": "The Shaper / related endgame."
+  },
+  "Indigon": {
+    "kind": "boss",
+    "summary": "The Elder / Uber Elder line."
+  },
+  "Blasphemer's Grasp": {
+    "kind": "boss",
+    "summary": "The Elder."
+  },
+  "Cyclopean Coil": {
+    "kind": "boss",
+    "summary": "The Elder."
+  },
+  "Astral Projector": {
+    "kind": "boss",
+    "summary": "The Maven."
+  },
+  "Graven's Secret": {
+    "kind": "boss",
+    "summary": "Sirus."
+  },
+  "Hands of the High Templar": {
+    "kind": "boss",
+    "summary": "Sirus."
+  },
+  "Crown of the Inward Eye": {
+    "kind": "boss",
+    "summary": "Sirus."
+  },
+  "The Burden of Truth": {
+    "kind": "boss",
+    "summary": "Searing Exarch."
+  },
+  "Crystallised Omniscience": {
+    "kind": "boss",
+    "summary": "Searing Exarch."
+  },
+  "The Annihilating Light": {
+    "kind": "boss",
+    "summary": "Searing Exarch."
+  },
+  "Ashes of the Stars": {
+    "kind": "boss",
+    "summary": "Eater of Worlds."
+  },
+  "Inpulsa's Broken Heart": {
+    "kind": "world_drop",
+    "summary": "World drop body armour. Popular mapping unique."
+  },
+  "Hyrri's Ire": {
+    "kind": "world_drop",
+    "summary": "World drop evasion armour."
+  },
+  "Queen of the Forest": {
+    "kind": "world_drop",
+    "summary": "World drop evasion armour."
+  },
+  "Lightning Coil": {
+    "kind": "world_drop",
+    "summary": "World drop armour."
+  },
+  "Belly of the Beast": {
+    "kind": "world_drop",
+    "summary": "World drop life armour. Very common."
+  }
+}
