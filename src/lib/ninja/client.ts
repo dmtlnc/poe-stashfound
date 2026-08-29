@@ -2,6 +2,14 @@ import { ninjaUserAgent } from "../config";
 import { parseNdic } from "./ndic";
 import { parseNinjaSearch, type ParsedSearch } from "./protobuf";
 
+/** Space ninja requests so CI does not burst their undocumented builds API. */
+const NINJA_MIN_GAP_MS = 1000;
+let lastNinjaAt = 0;
+
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
 export type NinjaLeague = { id: string; name?: string };
 
 export type IndexLeague = {
@@ -26,12 +34,15 @@ export type IndexState = {
 };
 
 async function ninjaGet(url: string): Promise<Response> {
+  const wait = lastNinjaAt + NINJA_MIN_GAP_MS - Date.now();
+  if (wait > 0) await sleep(wait);
   const res = await fetch(url, {
     headers: {
       "User-Agent": ninjaUserAgent(),
       Accept: "application/json, application/x-protobuf, application/octet-stream, */*",
     },
   });
+  lastNinjaAt = Date.now();
   if (!res.ok) {
     throw new Error(`poe.ninja ${url} failed (${res.status})`);
   }

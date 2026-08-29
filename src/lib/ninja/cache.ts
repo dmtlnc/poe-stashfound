@@ -36,7 +36,11 @@ export type NinjaCache = {
 };
 
 const cacheDir = path.join(process.cwd(), "data", "cache");
-const TOP_SKILLS = 75;
+const TOP_SKILLS: Record<NinjaMode, number> = {
+  standard: 40,
+  allflame: 75,
+  allflamehc: 40,
+};
 const MIN_SKILL_CHARS = 12;
 const UNIQUE_USAGE = 0.2;
 /** Forbidden jewels must still clear this on the AND-filtered second pass. */
@@ -75,10 +79,6 @@ function dimMap(search: ParsedSearch, id: string) {
 function nameAt(dict: string[], key: number): string | undefined {
   const name = dict[key];
   return name?.trim() ? name : undefined;
-}
-
-function sleep(ms: number) {
-  return new Promise((r) => setTimeout(r, ms));
 }
 
 async function readDisk(mode: NinjaMode): Promise<NinjaCache | null> {
@@ -260,12 +260,11 @@ async function buildLiveCache(mode: NinjaMode): Promise<NinjaCache> {
     .filter((s): s is { name: string; count: number } => Boolean(s.name))
     .filter((s) => s.count >= MIN_SKILL_CHARS && !SKIP_SKILLS.has(s.name))
     .sort((a, b) => b.count - a.count)
-    .slice(0, TOP_SKILLS);
+    .slice(0, TOP_SKILLS[mode]);
 
   const clusters: BuildCluster[] = [];
   let droppedSkip = 0;
   for (const skill of skillRanks) {
-    await sleep(80);
     const first = await fetchBuildSearch(snap.version, overview, {
       skills: skill.name,
     });
@@ -273,7 +272,6 @@ async function buildLiveCache(mode: NinjaMode): Promise<NinjaCache> {
     const classExtra = classSearchExtra(className);
     let seed = first;
     if (classExtra.class) {
-      await sleep(80);
       seed = await fetchBuildSearch(snap.version, overview, {
         skills: skill.name,
         ...classExtra,
@@ -282,7 +280,6 @@ async function buildLiveCache(mode: NinjaMode): Promise<NinjaCache> {
     let uniques = pickUniques(seed, itemDict, allow);
     const andItems = ninjaFilterUniques(uniques);
     if (andItems.length > 0) {
-      await sleep(80);
       const second = await fetchBuildSearch(snap.version, overview, {
         skills: skill.name,
         ...classExtra,
@@ -311,7 +308,7 @@ async function buildLiveCache(mode: NinjaMode): Promise<NinjaCache> {
   }
 
   console.log(
-    `ninja ${mode}: ${clusters.length} clusters, two-pass dropped Forbidden on ${droppedSkip} skills`,
+    `ninja ${mode}: ${clusters.length}/${TOP_SKILLS[mode]} clusters, two-pass dropped Forbidden on ${droppedSkip} skills`,
   );
 
   return {

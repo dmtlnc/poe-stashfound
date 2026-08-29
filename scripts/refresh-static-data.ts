@@ -9,6 +9,10 @@ import { getNinjaCache } from "../src/lib/ninja/cache";
 
 const REQUIRED_LIVE: NinjaMode[] = ["standard", "allflame", "allflamehc"];
 
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
 function parseArgs(argv: string[]): { modes: NinjaMode[]; ninjaOnly: boolean } {
   const ninjaOnly = argv.includes("--ninja-only");
   const requested = argv.filter((arg) => arg !== "--ninja-only");
@@ -40,6 +44,7 @@ async function main() {
       }
     }
     if (ninja.source === "ninja") live.push(mode);
+    if (mode !== modes[modes.length - 1]) await sleep(3000);
   }
   if (live.length === 0) {
     throw new Error("ninja refresh produced no live league caches");
