@@ -128,13 +128,16 @@ export function matchOne(
   snapshot: InventorySnapshot | null,
   cluster: BuildCluster,
   wiki: FarmWikiIndex,
-  options: Pick<MatchOptions, "ignoreRollChase"> = { ignoreRollChase: true },
+  options: Pick<MatchOptions, "ignoreRollChase"> = {
+    ignoreRollChase: true,
+  },
 ): { match: MatchResult | null; farm: FarmHint[] } {
   const owned = new Set(snapshot?.uniques.map((u) => u.name) ?? []);
   const match =
     matchBuilds(owned, [cluster], wiki, {
       ...DEFAULT_MATCH_OPTIONS,
-      hideChaseMissing: false,
+      hideIfMissing: [],
+      hideForbiddenJewels: false,
       ignoreRollChase: options.ignoreRollChase,
       mustUse: null,
       classFilter: null,

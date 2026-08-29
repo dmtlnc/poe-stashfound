@@ -1,13 +1,14 @@
 import { MIN_BUILD_UNIQUES } from "../config";
 import type { FarmWikiIndex } from "../farm/types";
 import type { BuildCluster, MatchResult } from "../types";
-import { needsMissingChase } from "./chase";
+import { usesForbiddenJewel, usesHiddenUnique, HIDE_IF_MISSING } from "./chase";
 import { BASE_CLASSES, baseClassName } from "./classes";
 import { isVariantUnique } from "./variants";
 import { uniqueWeight } from "./weights";
 
 export type MatchOptions = {
-  hideChaseMissing: boolean;
+  hideIfMissing: Iterable<string>;
+  hideForbiddenJewels: boolean;
   ignoreRollChase: boolean;
   mustUse: string | null;
   classFilter: string | null;
@@ -15,7 +16,8 @@ export type MatchOptions = {
 };
 
 export const DEFAULT_MATCH_OPTIONS: MatchOptions = {
-  hideChaseMissing: true,
+  hideIfMissing: [...HIDE_IF_MISSING],
+  hideForbiddenJewels: true,
   ignoreRollChase: true,
   mustUse: null,
   classFilter: null,
@@ -92,16 +94,19 @@ export function matchBuilds(
     if (mustUse && !cluster.uniqueNames.includes(mustUse)) continue;
     if (classFilter && classLabel(cluster) !== classFilter) continue;
     if (skillFilter && skillLabel(cluster) !== skillFilter) continue;
+    if (usesHiddenUnique(cluster.uniqueNames, options.hideIfMissing)) continue;
+    if (options.hideForbiddenJewels && usesForbiddenJewel(cluster.uniqueNames)) {
+      continue;
+    }
 
-    const counted = scoringNames(cluster.uniqueNames, options.ignoreRollChase);
+    const listed = cluster.uniqueNames;
+    const counted = scoringNames(listed, options.ignoreRollChase);
     const have: string[] = [];
     const missing: string[] = [];
-    for (const name of cluster.uniqueNames) {
+    for (const name of listed) {
       if (owned.has(name)) have.push(name);
       else missing.push(name);
     }
-
-    if (options.hideChaseMissing && needsMissingChase(missing)) continue;
 
     const nameHits = counted.filter((name) => owned.has(name)).length;
     const score = coverageScore(owned, counted, weightOf);
@@ -111,9 +116,10 @@ export function matchBuilds(
       score,
       owned: have,
       missing,
+      listedNames: listed,
       nameHits,
       nameTotal: counted.length,
-      variantWarnings: cluster.uniqueNames.filter(isVariantUnique),
+      variantWarnings: listed.filter(isVariantUnique),
     });
   }
 

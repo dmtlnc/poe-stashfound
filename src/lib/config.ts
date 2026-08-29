@@ -2,7 +2,7 @@ export const APP_NAME = "Stashfound";
 export const APP_VERSION = "0.1.0";
 
 export function ninjaUserAgent(): string {
-  return `stashfound/${APP_VERSION} (PoE1 SSF unique matcher; cache 8h)`;
+  return `stashfound/${APP_VERSION} (+https://github.com/dmtlnc/poe-stashfound; PoE1 unique matcher)`;
 }
 
 export const NINJA_CACHE_MS = 8 * 60 * 60 * 1000;

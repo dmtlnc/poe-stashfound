@@ -37,6 +37,7 @@ export function buildClusterFromMeta(opts: {
       ninjaOverview: opts.ninjaOverview,
       skill: opts.skill,
       uniqueNames: opts.uniqueNames,
+      className: opts.className,
     }),
   };
 }

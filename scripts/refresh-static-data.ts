@@ -1,17 +1,36 @@
-import { NINJA_MODES, type NinjaMode } from "../src/lib/leagues/modes";
+import {
+  NINJA_MODES,
+  parseNinjaMode,
+  type NinjaMode,
+} from "../src/lib/leagues/modes";
 import { getFarmWikiIndex } from "../src/lib/farm/wiki";
 import { getUniqueIconMap } from "../src/lib/icons/uniques";
 import { getNinjaCache } from "../src/lib/ninja/cache";
 
-const REQUIRED_LIVE: NinjaMode[] = ["allflame"];
+const REQUIRED_LIVE: NinjaMode[] = ["standard", "allflame", "allflamehc"];
+
+function parseArgs(argv: string[]): { modes: NinjaMode[]; ninjaOnly: boolean } {
+  const ninjaOnly = argv.includes("--ninja-only");
+  const requested = argv.filter((arg) => arg !== "--ninja-only");
+  const modes = requested.length
+    ? requested.map((arg) => parseNinjaMode(arg))
+    : [...NINJA_MODES];
+  return { modes, ninjaOnly };
+}
 
 async function main() {
+  const { modes, ninjaOnly } = parseArgs(process.argv.slice(2));
   const live: NinjaMode[] = [];
-  for (const mode of NINJA_MODES) {
+  for (const mode of modes) {
     console.log(`refresh: poe.ninja ${mode} clusters…`);
     const ninja = await getNinjaCache(mode, true);
+    const forbidden = ninja.clusters.filter((c) =>
+      c.uniqueNames.some(
+        (name) => name === "Forbidden Flesh" || name === "Forbidden Flame",
+      ),
+    ).length;
     console.log(
-      `refresh: ${mode} → ${ninja.source} ${ninja.clusters.length} ${ninja.gggLeague} clusters`,
+      `refresh: ${mode} → ${ninja.source} ${ninja.clusters.length} ${ninja.gggLeague} clusters (${forbidden} with Forbidden jewels)`,
     );
     if (REQUIRED_LIVE.includes(mode)) {
       if (ninja.source !== "ninja" || ninja.clusters.length < 20) {
@@ -25,6 +44,8 @@ async function main() {
   if (live.length === 0) {
     throw new Error("ninja refresh produced no live league caches");
   }
+
+  if (ninjaOnly) return;
 
   console.log("refresh: unique icons…");
   const icons = await getUniqueIconMap();

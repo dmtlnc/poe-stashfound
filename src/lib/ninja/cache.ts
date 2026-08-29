@@ -12,7 +12,6 @@ import {
 } from "../leagues/modes";
 import type { BuildCluster } from "../types";
 import { buildClusterFromMeta } from "./cluster";
-import { SKIP_BUILD_UNIQUES } from "./url";
 import {
   fetchBuildSearch,
   fetchDictionary,
@@ -21,6 +20,7 @@ import {
   type IndexLeague,
   type IndexState,
 } from "./client";
+import { ninjaClassParam, ninjaFilterUniques, SKIP_BUILD_UNIQUES } from "./url";
 import fallback from "@/data/ninja-fallback.json";
 import type { ParsedSearch } from "./protobuf";
 
@@ -36,11 +36,13 @@ export type NinjaCache = {
 };
 
 const cacheDir = path.join(process.cwd(), "data", "cache");
-const TOP_SKILLS = 100;
+const TOP_SKILLS = 75;
 const MIN_SKILL_CHARS = 12;
 const UNIQUE_USAGE = 0.2;
+/** Forbidden jewels must still clear this on the AND-filtered second pass. */
+const SKIP_UNIQUE_USAGE = 0.5;
 const MAX_UNIQUES = 12;
-const CACHE_VERSION = 7;
+const CACHE_VERSION = 10;
 const SKIP_SKILLS = new Set([
   "Animate Guardian",
   "Shield Charge",
@@ -123,22 +125,34 @@ function isGearSlotName(name: string): boolean {
   return /^(Rare|Magic|Normal)\b/.test(name);
 }
 
+function uniqueRates(
+  search: ParsedSearch,
+  itemDict: string[],
+  allow: Set<string>,
+): Map<string, number> {
+  const items = dimMap(search, "items");
+  const rates = new Map<string, number>();
+  if (!items || search.total === 0) return rates;
+  for (const c of items.counts) {
+    const name = nameAt(itemDict, c.key);
+    if (!name || isGearSlotName(name)) continue;
+    if (allow.size > 0 && !allow.has(name)) continue;
+    rates.set(name, c.count / search.total);
+  }
+  return rates;
+}
+
+function minKeepRate(name: string): number {
+  return SKIP_BUILD_UNIQUES.has(name) ? SKIP_UNIQUE_USAGE : UNIQUE_USAGE;
+}
+
 function pickUniques(
   search: ParsedSearch,
   itemDict: string[],
   allow: Set<string>,
 ): string[] {
-  const items = dimMap(search, "items");
-  if (!items || search.total === 0) return [];
-  const ranked = items.counts
-    .map((c) => {
-      const name = nameAt(itemDict, c.key);
-      if (!name || isGearSlotName(name)) return null;
-      if (SKIP_BUILD_UNIQUES.has(name)) return null;
-      if (allow.size > 0 && !allow.has(name)) return null;
-      return { name, rate: c.count / search.total };
-    })
-    .filter((x): x is { name: string; rate: number } => Boolean(x))
+  const ranked = [...uniqueRates(search, itemDict, allow).entries()]
+    .map(([name, rate]) => ({ name, rate }))
     .sort((a, b) => b.rate - a.rate);
 
   const core = ranked.filter((x) => x.rate >= UNIQUE_USAGE).slice(0, MAX_UNIQUES);
@@ -148,11 +162,29 @@ function pickUniques(
   return [...new Set(names)];
 }
 
+/** Drop first-pass uniques that are not actually common on the AND-filtered slice. */
+function refineUniques(
+  names: string[],
+  filtered: ParsedSearch,
+  itemDict: string[],
+  allow: Set<string>,
+): string[] {
+  if (filtered.total < MIN_SKILL_CHARS) return names;
+  const rates = uniqueRates(filtered, itemDict, allow);
+  const kept = names.filter((name) => (rates.get(name) ?? 0) >= minKeepRate(name));
+  return kept.length >= 3 ? kept : names;
+}
+
 function dominantClass(search: ParsedSearch, classDict: string[]): string {
   const dim = dimMap(search, "class") ?? dimMap(search, "secondascendancy");
   if (!dim?.counts.length) return "Unknown";
   const top = [...dim.counts].sort((a, b) => b.count - a.count)[0];
   return nameAt(classDict, top.key) ?? "Unknown";
+}
+
+function classSearchExtra(className: string): Record<string, string> {
+  const cls = ninjaClassParam(className);
+  return cls ? { class: cls } : {};
 }
 
 function pickLeague(idx: IndexState, mode: NinjaMode): IndexLeague | null {
@@ -231,18 +263,43 @@ async function buildLiveCache(mode: NinjaMode): Promise<NinjaCache> {
     .slice(0, TOP_SKILLS);
 
   const clusters: BuildCluster[] = [];
+  let droppedSkip = 0;
   for (const skill of skillRanks) {
     await sleep(80);
-    const filtered = await fetchBuildSearch(snap.version, overview, {
+    const first = await fetchBuildSearch(snap.version, overview, {
       skills: skill.name,
     });
-    const uniques = pickUniques(filtered, itemDict, allow);
+    const className = dominantClass(first, classDict);
+    const classExtra = classSearchExtra(className);
+    let seed = first;
+    if (classExtra.class) {
+      await sleep(80);
+      seed = await fetchBuildSearch(snap.version, overview, {
+        skills: skill.name,
+        ...classExtra,
+      });
+    }
+    let uniques = pickUniques(seed, itemDict, allow);
+    const andItems = ninjaFilterUniques(uniques);
+    if (andItems.length > 0) {
+      await sleep(80);
+      const second = await fetchBuildSearch(snap.version, overview, {
+        skills: skill.name,
+        ...classExtra,
+        items: andItems,
+      });
+      const hadSkip = uniques.some((n) => SKIP_BUILD_UNIQUES.has(n));
+      uniques = refineUniques(uniques, second, itemDict, allow);
+      if (hadSkip && !uniques.some((n) => SKIP_BUILD_UNIQUES.has(n))) {
+        droppedSkip += 1;
+      }
+    }
     const cluster = buildClusterFromMeta({
       ninjaMode: mode,
-      className: dominantClass(filtered, classDict),
+      className,
       skill: skill.name,
       uniqueNames: uniques,
-      characterCount: filtered.total,
+      characterCount: first.total,
       ninjaOverview: overview,
       ninjaUrlSlug: league.url,
     });
@@ -252,6 +309,10 @@ async function buildLiveCache(mode: NinjaMode): Promise<NinjaCache> {
   if (clusters.length === 0) {
     throw new Error(`ninja search returned no skill clusters for ${league.name}`);
   }
+
+  console.log(
+    `ninja ${mode}: ${clusters.length} clusters, two-pass dropped Forbidden on ${droppedSkip} skills`,
+  );
 
   return {
     version: CACHE_VERSION,

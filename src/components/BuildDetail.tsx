@@ -34,8 +34,9 @@ export function BuildDetail({ id }: { id: string }) {
           setError("Build not found");
           return;
         }
+        const prefs = loadMatchPrefs();
         const scored = matchOne(inv, found, wiki, {
-          ignoreRollChase: loadMatchPrefs().ignoreRollChase,
+          ignoreRollChase: prefs.ignoreRollChase,
         });
         setCluster(found);
         setMatch(scored.match);
@@ -93,7 +94,7 @@ export function BuildDetail({ id }: { id: string }) {
                 Unique checklist
               </h2>
               <ul className="space-y-2">
-                {cluster.uniqueNames.map((name) => {
+                {(match?.listedNames ?? cluster.uniqueNames).map((name) => {
                   const have = match?.owned.includes(name);
                   return (
                     <li

@@ -51,13 +51,19 @@ export async function fetchIndexState(): Promise<IndexState> {
 export async function fetchBuildSearch(
   version: string,
   overview: string,
-  extra: Record<string, string> = {},
+  extra: Record<string, string | string[]> = {},
 ): Promise<ParsedSearch> {
   const url = new URL(`https://poe.ninja/poe1/api/builds/${version}/search`);
   url.searchParams.set("overview", overview);
   url.searchParams.set("type", "exp");
   url.searchParams.set("language", "en");
-  for (const [k, v] of Object.entries(extra)) url.searchParams.set(k, v);
+  for (const [k, v] of Object.entries(extra)) {
+    if (Array.isArray(v)) {
+      for (const item of v) url.searchParams.append(k, item);
+    } else {
+      url.searchParams.set(k, v);
+    }
+  }
   const res = await ninjaGet(url.toString());
   const buf = new Uint8Array(await res.arrayBuffer());
   return parseNinjaSearch(buf);
@@ -76,6 +82,7 @@ const UNIQUE_TYPES = [
   "UniqueAccessory",
   "UniqueFlask",
   "UniqueJewel",
+  "ForbiddenJewel",
 ];
 
 export async function fetchUniqueNameAllowlist(tradeLeague: string): Promise<Set<string>> {

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppHeader } from "./AppHeader";
 import { BuildMatchList } from "./BuildMatchList";
 import { ImportPanel } from "./ImportPanel";
-import { UniqueChip, UniqueIconProvider } from "./UniqueArt";
+import { UniqueArt, UniqueChip, UniqueIconProvider } from "./UniqueArt";
 import {
   loadFarmWiki,
   loadNinja,
@@ -23,7 +23,7 @@ import {
   DEFAULT_LADDER_MODE,
   DEFAULT_NINJA_MODE,
   LADDER_LABEL,
-  LADDER_TO_NINJA,
+  ninjaModeForStashSwitch,
   parseLadderMode,
   parseNinjaMode,
   type LadderMode,
@@ -31,7 +31,7 @@ import {
 } from "@/lib/leagues/modes";
 import { loadInventory, saveInventory } from "@/lib/client/store";
 import type { FarmWikiIndex } from "@/lib/farm/types";
-import { CHASE_UNIQUES } from "@/lib/match/chase";
+import { HIDE_IF_MISSING, hideIfMissingNames } from "@/lib/match/chase";
 import { isMustUseUnique } from "@/lib/match/mustUse";
 import { filterOptions, NEAR_MISS_FLOOR, type MatchOptions } from "@/lib/match/score";
 import type { InventorySnapshot } from "@/lib/types";
@@ -39,12 +39,42 @@ import { LeagueSelects } from "./LeagueSelects";
 
 function prefsToOptions(prefs: MatchPrefs): MatchOptions {
   return {
-    hideChaseMissing: prefs.hideChaseMissing,
+    hideIfMissing: hideIfMissingNames(prefs.hideIfMissing),
+    hideForbiddenJewels: prefs.hideForbiddenJewels,
     ignoreRollChase: prefs.ignoreRollChase,
     mustUse: prefs.mustUse || null,
     classFilter: prefs.classFilter || null,
     skillFilter: prefs.skillFilter || null,
   };
+}
+
+function HideRow({
+  name,
+  icon,
+  checked,
+  onChange,
+}: {
+  name: string;
+  icon: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <label className="hide-row">
+      <UniqueArt name={icon} size={26} />
+      <span className="min-w-0 flex-1 truncate">
+        <span className="text-muted">Hide </span>
+        {name}
+      </span>
+      <input
+        type="checkbox"
+        role="switch"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+      />
+      <span className="hide-switch" aria-hidden />
+    </label>
+  );
 }
 
 export function Dashboard() {
@@ -158,7 +188,7 @@ export function Dashboard() {
 
   async function onStashLeague(mode: LadderMode) {
     if (!snapshot || snapshot.ladderMode === mode || leagueBusy) return;
-    const ninjaMode = LADDER_TO_NINJA[mode];
+    const ninjaMode = ninjaModeForStashSwitch(mode, snapshot.ninjaMode);
     setError(null);
     if (snapshot.ladderAccount && !snapshot.mock) {
       setLeagueBusy(true);
@@ -300,22 +330,30 @@ export function Dashboard() {
             </label>
           </div>
 
-          <div className="panel grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3">
-            <label className="flex items-start gap-2 text-sm text-foreground">
-              <input
-                type="checkbox"
-                checked={prefs.hideChaseMissing}
-                onChange={(e) => updatePrefs({ hideChaseMissing: e.target.checked })}
-                className="mt-1 accent-gold"
+          <div className="panel overflow-hidden p-0 lg:grid lg:grid-cols-[minmax(18rem,22rem)_1fr]">
+            <div className="border-b border-border lg:border-b-0 lg:border-r lg:border-border">
+              {HIDE_IF_MISSING.map((name) => (
+                <HideRow
+                  key={name}
+                  name={name}
+                  icon={name}
+                  checked={prefs.hideIfMissing[name]}
+                  onChange={(checked) =>
+                    updatePrefs({
+                      hideIfMissing: { ...prefs.hideIfMissing, [name]: checked },
+                    })
+                  }
+                />
+              ))}
+              <HideRow
+                name="Forbidden jewels"
+                icon="Forbidden Flesh"
+                checked={prefs.hideForbiddenJewels}
+                onChange={(checked) => updatePrefs({ hideForbiddenJewels: checked })}
               />
-              <span>
-                Hide chase uniques I don&apos;t have
-                <span className="mt-0.5 block text-xs text-muted">
-                  {CHASE_UNIQUES.join(", ")}
-                </span>
-              </span>
-            </label>
-            <label className="flex items-start gap-2 text-sm text-foreground">
+            </div>
+            <div className="grid gap-3 p-4 sm:grid-cols-2">
+            <label className="flex items-start gap-2 text-sm text-foreground sm:col-span-2">
               <input
                 type="checkbox"
                 checked={prefs.ignoreRollChase}
@@ -363,7 +401,7 @@ export function Dashboard() {
                 ))}
               </select>
             </label>
-            <label className="label-caps block">
+            <label className="label-caps block sm:col-span-2">
               Skill
               <select
                 value={prefs.skillFilter}
@@ -378,6 +416,7 @@ export function Dashboard() {
                 ))}
               </select>
             </label>
+            </div>
           </div>
 
           {loadingMatches ? (

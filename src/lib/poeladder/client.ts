@@ -61,7 +61,7 @@ async function resolveLadder(mode: LadderMode = DEFAULT_LADDER_MODE): Promise<st
   if (!res.ok) throw new Error(`PoE Ladder ladders failed (${res.status})`);
   const ladders = (await res.json()) as PoeladderLadder[];
   const pick = pickLadderByMode(ladders, mode);
-  if (!pick) throw new Error("Could not detect that SSF ladder on PoE Ladder.");
+  if (!pick) throw new Error("Could not detect that league on PoE Ladder.");
   return pick.identifier;
 }
 

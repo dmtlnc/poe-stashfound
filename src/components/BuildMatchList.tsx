@@ -52,7 +52,7 @@ export function BuildMatchList({
             </div>
           </div>
           <div className="mt-3 flex flex-wrap gap-1.5">
-            {row.cluster.uniqueNames.map((name) => (
+            {row.listedNames.map((name) => (
               <UniqueChip
                 key={name}
                 name={name}

@@ -104,7 +104,7 @@ export function ImportPanel({
           >
             Uniques URL ↗
           </a>
-          . Pick the SSF league first — CSV and pasted names still work without
+          . Pick the league first — CSV and pasted names still work without
           the import worker.
         </p>
       </div>

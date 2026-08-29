@@ -132,7 +132,7 @@ async function handleImport(request: Request, env: Env, origin: string): Promise
     body.ladderMode !== null &&
     (typeof body.ladderMode !== "string" || !isLadderMode(body.ladderMode))
   ) {
-    return json({ error: "Unknown SSF league." }, 400, origin);
+    return json({ error: "Unknown league." }, 400, origin);
   }
   const ladderMode = parseLadderMode(
     typeof body.ladderMode === "string" ? body.ladderMode : undefined,

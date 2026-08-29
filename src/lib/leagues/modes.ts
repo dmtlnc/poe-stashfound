@@ -1,5 +1,6 @@
 export const LADDER_MODES = [
   "ssf-standard",
+  "standard",
   "ssf-allflame",
   "hcssf-allflame",
 ] as const;
@@ -15,6 +16,7 @@ export const DEFAULT_NINJA_MODE: NinjaMode = "allflame";
 
 export const LADDER_MODE_OPTIONS: { id: LadderMode; label: string }[] = [
   { id: "ssf-standard", label: "SSF Standard" },
+  { id: "standard", label: "Standard" },
   { id: "ssf-allflame", label: "Allflame SSF" },
   { id: "hcssf-allflame", label: "Allflame HCSSF" },
 ];
@@ -27,15 +29,26 @@ export const NINJA_MODE_OPTIONS: { id: NinjaMode; label: string }[] = [
 
 export const LADDER_TO_NINJA: Record<LadderMode, NinjaMode> = {
   "ssf-standard": "standard",
+  standard: "allflame",
   "ssf-allflame": "allflame",
   "hcssf-allflame": "allflamehc",
 };
 
 export const LADDER_LABEL: Record<LadderMode, string> = {
   "ssf-standard": "SSF Standard",
+  standard: "Standard",
   "ssf-allflame": "SSF Allflame",
   "hcssf-allflame": "HC SSF Allflame",
 };
+
+/** Standard stash import does not retarget poe.ninja. */
+export function ninjaModeForStashSwitch(
+  ladderMode: LadderMode,
+  currentNinja: NinjaMode | undefined,
+): NinjaMode {
+  if (ladderMode === "standard") return parseNinjaMode(currentNinja);
+  return LADDER_TO_NINJA[ladderMode];
+}
 
 export function isLadderMode(value: string | null | undefined): value is LadderMode {
   return LADDER_MODES.includes(value as LadderMode);

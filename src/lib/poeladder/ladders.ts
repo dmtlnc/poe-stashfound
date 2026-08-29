@@ -41,6 +41,13 @@ function isSsfSc(l: PoeladderLadder): boolean {
   return id.startsWith("ssf_") || name.startsWith("ssf ");
 }
 
+function isTradeStandard(l: PoeladderLadder): boolean {
+  if (isRuthless(l) || isSsfSc(l) || isHcSsf(l)) return false;
+  const id = l.identifier.toLowerCase();
+  const name = l.name.toLowerCase();
+  return id === "standard" || name === "standard";
+}
+
 function newest(list: PoeladderLadder[]): PoeladderLadder | null {
   const copy = [...list];
   copy.sort(
@@ -62,6 +69,9 @@ export function pickLadderByMode(
   const list = ladders.filter((l) => l.identifier && !isRuthless(l));
   if (mode === "ssf-standard") {
     return newest(list.filter((l) => isSsfSc(l) && isStandard(l)));
+  }
+  if (mode === "standard") {
+    return newest(list.filter(isTradeStandard));
   }
   if (mode === "hcssf-allflame") {
     return newest(list.filter((l) => isHcSsf(l) && !isStandard(l)));

@@ -16,7 +16,11 @@ function Favicon({ src, alt }: { src: string; alt: string }) {
 }
 
 export function BuildOutboundLinks({ cluster }: { cluster: BuildCluster }) {
-  const ninja = withNinjaItemFilters(cluster.ninjaUrl, cluster.uniqueNames);
+  const ninja = withNinjaItemFilters(
+    cluster.ninjaUrl,
+    cluster.uniqueNames,
+    cluster.ascendancy || cluster.className,
+  );
   const youtube = youtubeBuildSearchUrl({
     skill: cluster.mainSkill,
     className: cluster.ascendancy || cluster.className,

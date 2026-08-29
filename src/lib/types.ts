@@ -22,7 +22,7 @@ export type InventorySnapshot = {
   uniques: UniqueItem[];
   tabCount: number;
   characterCount: number;
-  /** PoE Ladder SSF league used for import. */
+  /** PoE Ladder league used for import. */
   ladderMode?: LadderMode;
   /** poe.ninja trade-build cache to match against. */
   ninjaMode?: NinjaMode;
@@ -73,6 +73,8 @@ export type MatchResult = {
   score: number;
   owned: string[];
   missing: string[];
+  /** Unique names after ignore-forbidden (cluster order). */
+  listedNames: string[];
   /** Counted names owned (roll-chase omitted when that toggle is on). */
   nameHits: number;
   nameTotal: number;
