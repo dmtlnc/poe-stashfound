@@ -1,81 +1,111 @@
 import type { LadderMode } from "../leagues/modes";
 
-export type PoeladderLadder = {
-  identifier: string;
+const API = "https://poeladder.com/api/v1";
+
+/** Anonymous stashfound league row. `standard` means softcore, not the eternal league. */
+export type StashfoundLeague = {
   name: string;
-  leagueName?: string;
-  indexed?: boolean;
-  startDateUTC?: string;
+  identifier: string;
+  ssf: boolean;
+  temporaryLeague: boolean;
+  standard: boolean;
+  hardcore: boolean;
+  ruthless: boolean;
+  isPoe2: boolean;
+  url: string;
 };
 
-function hay(l: PoeladderLadder): string {
-  return `${l.identifier} ${l.name} ${l.leagueName ?? ""}`.toLowerCase();
+export function stashfoundLeaguesUrl(user: string): string {
+  return `${API}/users/${encodeURIComponent(user)}/stashfound`;
 }
 
-function isRuthless(l: PoeladderLadder): boolean {
-  return /ruthless|\bssf r\b|\bssfr\b/.test(hay(l));
+export function stashfoundUniquesUrl(user: string, identifier: string): string {
+  return `${API}/users/${encodeURIComponent(user)}/leagues/${encodeURIComponent(identifier)}/stashfound`;
 }
 
-function isStandard(l: PoeladderLadder): boolean {
-  return hay(l).includes("standard");
+function flag(row: Record<string, unknown>, key: string): boolean {
+  return row[key] === true;
 }
 
-function isHcSsf(l: PoeladderLadder): boolean {
-  const h = hay(l);
-  const id = l.identifier.toLowerCase();
-  return (
-    id.startsWith("hcssf") ||
-    id.includes("hcssf") ||
-    (id.startsWith("ssf_") && id.includes("hardcore")) ||
-    h.includes("hcssf") ||
-    h.includes("hc ssf") ||
-    h.includes("hardcore ssf") ||
-    h.includes("ssf hardcore")
-  );
+export function parseStashfoundLeagues(raw: unknown): StashfoundLeague[] {
+  if (!Array.isArray(raw)) return [];
+  const out: StashfoundLeague[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const row = item as Record<string, unknown>;
+    const identifier = String(row.identifier ?? "").trim();
+    const name = String(row.name ?? "").trim();
+    if (!identifier || !name) continue;
+    out.push({
+      identifier,
+      name,
+      url: String(row.url ?? "").trim(),
+      ssf: flag(row, "ssf"),
+      temporaryLeague: flag(row, "temporaryLeague"),
+      standard: flag(row, "standard"),
+      hardcore: flag(row, "hardcore"),
+      ruthless: flag(row, "ruthless"),
+      isPoe2: flag(row, "isPoe2"),
+    });
+  }
+  return out;
 }
 
-function isSsfSc(l: PoeladderLadder): boolean {
-  if (isHcSsf(l) || isRuthless(l)) return false;
-  const id = l.identifier.toLowerCase();
-  const name = l.name.toLowerCase();
-  return id.startsWith("ssf_") || name.startsWith("ssf ");
+export function parseStashfoundNames(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  const names: string[] = [];
+  const seen = new Set<string>();
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const name = String((item as { name?: unknown }).name ?? "").trim();
+    if (name.length < 3 || name.length > 80 || seen.has(name)) continue;
+    seen.add(name);
+    names.push(name);
+  }
+  return names;
 }
 
-function isTradeStandard(l: PoeladderLadder): boolean {
-  if (isRuthless(l) || isSsfSc(l) || isHcSsf(l)) return false;
-  const id = l.identifier.toLowerCase();
-  const name = l.name.toLowerCase();
-  return id === "standard" || name === "standard";
-}
-
-function newest(list: PoeladderLadder[]): PoeladderLadder | null {
-  const copy = [...list];
-  copy.sort(
-    (a, b) => Date.parse(b.startDateUTC ?? "0") - Date.parse(a.startDateUTC ?? "0"),
-  );
-  return copy[0] ?? null;
+function usable(l: StashfoundLeague): boolean {
+  return Boolean(l.identifier) && !l.ruthless && !l.isPoe2;
 }
 
 export function pickCurrentSsfLadder(
-  ladders: PoeladderLadder[],
-): PoeladderLadder | null {
-  return pickLadderByMode(ladders, "ssf-allflame");
+  leagues: StashfoundLeague[],
+): StashfoundLeague | null {
+  return pickLadderByMode(leagues, "ssf-allflame");
 }
 
 export function pickLadderByMode(
-  ladders: PoeladderLadder[],
+  leagues: StashfoundLeague[],
   mode: LadderMode,
-): PoeladderLadder | null {
-  const list = ladders.filter((l) => l.identifier && !isRuthless(l));
+): StashfoundLeague | null {
+  const list = leagues.filter(usable);
   if (mode === "ssf-standard") {
-    return newest(list.filter((l) => isSsfSc(l) && isStandard(l)));
+    return (
+      list.find((l) => l.ssf && l.standard && !l.hardcore && !l.temporaryLeague) ??
+      null
+    );
   }
   if (mode === "standard") {
-    return newest(list.filter(isTradeStandard));
+    return list.find((l) => !l.ssf && l.standard && !l.hardcore) ?? null;
   }
   if (mode === "hcssf-allflame") {
-    return newest(list.filter((l) => isHcSsf(l) && !isStandard(l)));
+    const hc = list.filter((l) => l.ssf && l.hardcore);
+    return hc.find((l) => l.temporaryLeague) ?? hc[0] ?? null;
   }
-  return newest(list.filter((l) => isSsfSc(l) && !isStandard(l)));
+  return (
+    list.find((l) => l.ssf && !l.hardcore && l.temporaryLeague) ?? null
+  );
 }
 
+export function pickStashfoundLeague(
+  leagues: StashfoundLeague[],
+  mode: LadderMode,
+  identifier?: string,
+): StashfoundLeague | null {
+  if (identifier) {
+    const hit = leagues.filter(usable).find((l) => l.identifier === identifier);
+    if (hit) return hit;
+  }
+  return pickLadderByMode(leagues, mode);
+}

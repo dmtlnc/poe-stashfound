@@ -10,20 +10,23 @@
  * shared secret in the static frontend — it is extractable.
  */
 import { parsePoeladderAccount, parsePoeladderTag } from "../../src/lib/import/parse";
+import { ninjaUserAgent } from "../../src/lib/config";
 import { isLadderMode, parseLadderMode, LADDER_LABEL } from "../../src/lib/leagues/modes";
-import { pickLadderByMode, type PoeladderLadder } from "../../src/lib/poeladder/ladders";
+import {
+  parseStashfoundLeagues,
+  parseStashfoundNames,
+  pickStashfoundLeague,
+  stashfoundLeaguesUrl,
+  stashfoundUniquesUrl,
+} from "../../src/lib/poeladder/ladders";
 
-const UPSTREAM = "https://poeladder.com";
-const API = `${UPSTREAM}/api/v1`;
-const UA = "stashfound-import/0.1";
+const UA = ninjaUserAgent();
 const MAX_BODY = 4096;
 const MAX_INPUT = 512;
 const MAX_NAMES = 2500;
 const TIMEOUT_MS = 12_000;
 const RATE_LIMIT = 8;
 const RATE_WINDOW_MS = 60_000;
-const BUNDLE_RE = /\/assets\/index-[A-Za-z0-9._-]+\.js/;
-const JWT_RE = /REACT_APP_JWT:"([^"]+)"/;
 const LADDER_ID_RE = /^[A-Za-z0-9_]{3,80}$/;
 
 type RateLimiter = {
@@ -35,9 +38,6 @@ export interface Env {
   TURNSTILE_SECRET?: string;
   IMPORT_LIMIT?: RateLimiter;
 }
-
-type JwtMemory = { token: string; expiresAt: number };
-let jwtMemory: JwtMemory | null = null;
 
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -122,8 +122,8 @@ async function handleImport(request: Request, env: Env, origin: string): Promise
     return json({ error: "Need a PoE Ladder account like name-1234 or a Uniques URL." }, 400, origin);
   }
 
-  let ladder = parsed.ladderIdentifier;
-  if (ladder && !LADDER_ID_RE.test(ladder)) {
+  const ladderHint = parsed.ladderIdentifier;
+  if (ladderHint && !LADDER_ID_RE.test(ladderHint)) {
     return json({ error: "Invalid ladder." }, 400, origin);
   }
 
@@ -139,19 +139,35 @@ async function handleImport(request: Request, env: Env, origin: string): Promise
   );
 
   const signal = AbortSignal.timeout(TIMEOUT_MS);
-  if (!ladder) {
-    try {
-      ladder = await resolveLadder(signal, ladderMode);
-    } catch {
-      return json(
-        { error: `Could not find ${LADDER_LABEL[ladderMode]} on PoE Ladder.` },
-        404,
-        origin,
-      );
-    }
+  let pick;
+  try {
+    const leaguesRes = await poeladderGet(stashfoundLeaguesUrl(user), signal);
+    if (!leaguesRes.ok) throw new Error("leagues");
+    pick = pickStashfoundLeague(
+      parseStashfoundLeagues(await leaguesRes.json()),
+      ladderMode,
+      ladderHint,
+    );
+  } catch {
+    pick = null;
+  }
+  if (!pick || !LADDER_ID_RE.test(pick.identifier)) {
+    return json(
+      { error: `Could not find ${LADDER_LABEL[ladderMode]} on PoE Ladder.` },
+      404,
+      origin,
+    );
   }
 
-  const names = await fetchOwnedNames(user, ladder, signal);
+  const namesRes = await poeladderGet(
+    stashfoundUniquesUrl(user, pick.identifier),
+    signal,
+  );
+  if (namesRes.status === 404) {
+    return json({ error: "No owned uniques found for that account." }, 404, origin);
+  }
+  if (!namesRes.ok) throw new Error("uniques");
+  const names = parseStashfoundNames(await namesRes.json()).slice(0, MAX_NAMES);
   if (names.length === 0) {
     return json({ error: "No owned uniques found for that account." }, 404, origin);
   }
@@ -159,48 +175,7 @@ async function handleImport(request: Request, env: Env, origin: string): Promise
   return json({ names, accountHint: user }, 200, origin);
 }
 
-async function resolveLadder(
-  signal: AbortSignal,
-  mode: ReturnType<typeof parseLadderMode>,
-): Promise<string> {
-  const res = await poeladderGet(`${API}/ladders`, signal);
-  if (!res.ok) throw new Error("ladders");
-  const ladders = (await res.json()) as PoeladderLadder[];
-  const pick = pickLadderByMode(Array.isArray(ladders) ? ladders : [], mode);
-  if (!pick) throw new Error("ladder");
-  if (!LADDER_ID_RE.test(pick.identifier)) throw new Error("ladder");
-  return pick.identifier;
-}
-
-async function fetchOwnedNames(
-  user: string,
-  ladder: string,
-  signal: AbortSignal,
-): Promise<string[]> {
-  const url = new URL(`${API}/users/${encodeURIComponent(user)}/uniques`);
-  url.searchParams.set("ladderIdentifier", ladder);
-  url.searchParams.set("display", "owned");
-  url.searchParams.set("status", "active");
-  url.searchParams.set("excludeLeagueUniques", "1");
-  const res = await poeladderGet(url.toString(), signal);
-  if (res.status === 404) return [];
-  if (!res.ok) throw new Error("uniques");
-  const data = (await res.json()) as { uniques?: Record<string, unknown>[] };
-  const names: string[] = [];
-  const seen = new Set<string>();
-  for (const row of data.uniques ?? []) {
-    const name = String(row.name ?? "").trim();
-    const owned = row.owned === undefined ? true : Boolean(row.owned);
-    if (!owned || name.length < 3 || name.length > 80 || seen.has(name)) continue;
-    seen.add(name);
-    names.push(name);
-    if (names.length >= MAX_NAMES) break;
-  }
-  return names;
-}
-
 async function poeladderGet(url: string, signal: AbortSignal): Promise<Response> {
-  const token = await publicClientToken(signal);
   const res = await fetch(url, {
     method: "GET",
     redirect: "follow",
@@ -208,40 +183,10 @@ async function poeladderGet(url: string, signal: AbortSignal): Promise<Response>
     headers: {
       "User-Agent": UA,
       Accept: "application/json",
-      "jwt-auth": token,
     },
   });
   assertPoeladder(res);
   return res;
-}
-
-async function publicClientToken(signal: AbortSignal): Promise<string> {
-  if (jwtMemory && jwtMemory.expiresAt > Date.now()) return jwtMemory.token;
-
-  const page = await fetch(`${UPSTREAM}/uniques`, {
-    method: "GET",
-    redirect: "follow",
-    signal,
-    headers: { "User-Agent": UA, Accept: "text/html" },
-  });
-  assertPoeladder(page);
-  if (!page.ok) throw new Error("page");
-  const html = await page.text();
-  const bundlePath = html.match(BUNDLE_RE)?.[0];
-  if (!bundlePath || bundlePath.includes("..")) throw new Error("bundle");
-
-  const js = await fetch(`${UPSTREAM}${bundlePath}`, {
-    method: "GET",
-    redirect: "follow",
-    signal,
-    headers: { "User-Agent": UA },
-  });
-  assertPoeladder(js);
-  if (!js.ok) throw new Error("bundle");
-  const token = JWT_RE.exec(await js.text())?.[1];
-  if (!token || token.length > 4096) throw new Error("token");
-  jwtMemory = { token, expiresAt: Date.now() + 6 * 60 * 60 * 1000 };
-  return token;
 }
 
 function assertPoeladder(res: Response) {

@@ -19,6 +19,21 @@ namespace_id = "1001"
   limit = 8
   period = 60
 
+[observability]
+enabled = false
+head_sampling_rate = 1
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+persist = true
+invocation_logs = true
+
+[observability.traces]
+enabled = false
+persist = true
+head_sampling_rate = 1
+
 [dev]
 port = 8787
 # Local secrets: worker/.dev.vars via `npm run worker` (--env-file).
