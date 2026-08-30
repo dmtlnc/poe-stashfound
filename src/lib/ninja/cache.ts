@@ -42,8 +42,8 @@ const TOP_SKILLS: Record<NinjaMode, number> = {
   allflamehc: 40,
 };
 const MIN_SKILL_CHARS = 12;
-const UNIQUE_USAGE = 0.2;
-/** Forbidden jewels must still clear this on the AND-filtered second pass. */
+const UNIQUE_USAGE = 0.35;
+/** Forbidden jewels must clear this on the skill+class pick, not the AND refine. */
 const SKIP_UNIQUE_USAGE = 0.5;
 const MAX_UNIQUES = 12;
 const CACHE_VERSION = 10;
@@ -155,10 +155,13 @@ function pickUniques(
     .map(([name, rate]) => ({ name, rate }))
     .sort((a, b) => b.rate - a.rate);
 
-  const core = ranked.filter((x) => x.rate >= UNIQUE_USAGE).slice(0, MAX_UNIQUES);
-  const names = (core.length >= 3 ? core : ranked.slice(0, MAX_UNIQUES)).map(
-    (x) => x.name,
-  );
+  const core = ranked
+    .filter((x) => x.rate >= minKeepRate(x.name))
+    .slice(0, MAX_UNIQUES);
+  const fallback = ranked
+    .filter((x) => !SKIP_BUILD_UNIQUES.has(x.name))
+    .slice(0, MAX_UNIQUES);
+  const names = (core.length >= 3 ? core : fallback).map((x) => x.name);
   return [...new Set(names)];
 }
 
@@ -171,7 +174,7 @@ function refineUniques(
 ): string[] {
   if (filtered.total < MIN_SKILL_CHARS) return names;
   const rates = uniqueRates(filtered, itemDict, allow);
-  const kept = names.filter((name) => (rates.get(name) ?? 0) >= minKeepRate(name));
+  const kept = names.filter((name) => (rates.get(name) ?? 0) >= UNIQUE_USAGE);
   return kept.length >= 3 ? kept : names;
 }
 
